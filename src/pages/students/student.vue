@@ -1,5 +1,23 @@
 <template>
-  <h1 class="page-title">Học viên</h1>
+  <div class="flex justify-between items-center mb-6">
+    <div>
+      <h1 class="page-title">Học viên</h1>
+    </div>
+    <div>
+      <VaButton @click="$refs.modal.show()"> + Thêm học viên </VaButton>
+    </div>
+  </div>
+  <VaModal ref="modal" v-model="doShowModal" size="small" mobile-fullscreen close-button hide-default-actions>
+    <h1 class="va-h5">{{ studentToEdit ? 'Cập nhật học viên' : 'Thêm mới học viên' }}</h1>
+    <StudentModal
+      v-if="doShowModal"
+      v-model="doShowModal"
+      :student="studentToEdit"
+      :save-button-label="studentToEdit ? 'Cập nhật' : 'Thêm mới'"
+      @save="onSave"
+      @close="doShowModal = false"
+    />
+  </VaModal>
   <VaCard>
     <VaCardContent>
       <div>
@@ -49,6 +67,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { fetchDataSheet } from '../../stores/data-from-sheet'
+import StudentModal from './components/studentModal.vue'
 
 const filter = ref('')
 const filterByFields = ref([])
@@ -57,6 +76,8 @@ const items = ref([])
 const pageSize = 10 // Số lượng mục trên mỗi trang
 const currentPage = ref(1) // Trang hiện tại
 const isLoading = ref(false)
+const doShowModal = ref(false)
+const studentToEdit = (ref < import('./types').Student) | (null > null)
 
 const fetchStudents = async () => {
   try {
