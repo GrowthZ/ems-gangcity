@@ -23,7 +23,7 @@ const defaultNewStudent: Student = {
   nickname: '',
   group: '',
   gender: '',
-  birthday: '',
+  birthday: new Date(2010, 1, 3).toISOString().substr(0, 10),
   phone: '',
   dateStart: new Date().toISOString().substr(0, 10),
   lanDongTien: 0,
@@ -95,17 +95,24 @@ const onSave = () => {
         />
       </div>
       <div class="flex gap-4 flex-col sm:flex-row w-full">
-        <VaInput
+        <VaDateInput
           v-model="newStudent.birthday"
           label="Ngày sinh"
           class="w-full sm:w-1/2"
           :rules="[validators.required]"
           name="birthday"
         />
+        <VaDateInput
+          v-model="newStudent.dateStart"
+          label="Ngày bắt đầu"
+          class="w-full sm:w-1/2"
+          :rules="[validators.required]"
+          name="dateStart"
+        />
+      </div>
 
-        <div class="flex items-center w-1/2 mt-4">
-          <VaCheckbox v-model="newStudent.active" label="Active" class="w-full" name="active" />
-        </div>
+      <div class="flex items-center w-1/2 mt-4">
+        <VaCheckbox v-model="newStudent.active" label="Đang hoạt động" class="w-full" name="active" />
       </div>
 
       <VaTextarea v-model="newStudent.notes" label="Ghi chú" class="w-full" name="notes" />

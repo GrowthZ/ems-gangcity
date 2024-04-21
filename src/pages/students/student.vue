@@ -7,29 +7,40 @@
       <VaButton @click="$refs.modal.show()"> + Thêm học viên </VaButton>
     </div>
   </div>
-  <VaModal ref="modal" v-model="doShowModal" size="small" mobile-fullscreen close-button hide-default-actions>
+  <VaModal
+    ref="modal"
+    v-slot="{ cancel, ok }"
+    v-model="doShowModal"
+    size="small"
+    mobile-fullscreen
+    close-button
+    hide-default-actions
+  >
     <h1 class="va-h5">{{ studentToEdit ? 'Cập nhật học viên' : 'Thêm mới học viên' }}</h1>
     <StudentModal
       v-if="doShowModal"
       v-model="doShowModal"
       :student="studentToEdit"
       :save-button-label="studentToEdit ? 'Cập nhật' : 'Thêm mới'"
-      @save="onSave"
-      @close="doShowModal = false"
+      @close="cancel"
+      @save="
+        (student) => {
+          onSave(student)
+          ok()
+        }
+      "
     />
   </VaModal>
   <VaCard>
     <VaCardContent>
       <div>
         <div class="grid md:grid-cols-2 gap-6 mb-6">
-          <VaInput v-model="filter" placeholder="Tìm kiếm..." class="w-full" />
-          <VaSelect
-            v-model="filterByFields"
-            placeholder="Chọn trường lọc"
-            :options="columnsWithName"
-            value-by="value"
-            multiple
-          />
+          <VaInput v-model="filter" placeholder="Tìm kiếm..." class="w-full">
+            <template #prependInner>
+              <VaIcon name="search" color="secondary" size="small" />
+            </template>
+          </VaInput>
+          <VaSelect v-model="selectedGroup" placeholder="Chọn lớp" :options="uniqueGroups" value-by="value" />
         </div>
 
         <VaDataTable
@@ -44,7 +55,7 @@
         <div class="flex justify-between items-center mb-6">
           <div color="info" class="pt-3">
             Tổng số:
-            <strong>{{ items.length }}</strong>
+            <strong>{{ filteredItems.length }}</strong>
           </div>
           <div>
             <VaPagination
@@ -65,13 +76,14 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { fetchDataSheet } from '../../stores/data-from-sheet'
 import StudentModal from './components/studentModal.vue'
 
 const filter = ref('')
 const filterByFields = ref([])
 const filteredCount = ref(0)
+const selectedGroup = ref('')
 const items = ref([])
 const pageSize = 10 // Số lượng mục trên mỗi trang
 const currentPage = ref(1) // Trang hiện tại
@@ -98,12 +110,30 @@ const columns = [
   { key: 'status', label: 'Trạng thái' },
 ]
 
-const columnsWithName = columns.map((column) => {
-  return { value: column.key, text: column.label || column.key }
+// const columnsWithName = columns.map((column) => {
+//   return { value: column.key, text: column.label || column.key }
+// })
+
+const uniqueGroups = computed(() => {
+  // Tạo danh sách các giá trị duy nhất của cột group
+  const groups = new Set(items.value.map((item) => item.group))
+  const uniqueGroupsArray = Array.from(groups).map((group) => ({ value: group, text: group }))
+  uniqueGroupsArray.unshift({ value: '', text: 'Tất cả' })
+  return items.value ? uniqueGroupsArray : []
 })
 
 const filteredItems = computed(() => {
   return items.value.filter((item) => {
+    // Kiểm tra xem đã chọn tất cả không
+    const isAllSelected = selectedGroup.value === ''
+
+    if (!isAllSelected) {
+      // Nếu đã chọn group, chỉ tìm kiếm trong group đó
+      if (item?.group !== selectedGroup.value) {
+        return false
+      }
+    }
+
     // Lọc dữ liệu dựa trên filter và filterByFields
     const filterRegex = new RegExp(filter.value, 'i')
     const filterFields = filterByFields.value
@@ -166,6 +196,10 @@ const isPaginationVisible = computed(() => {
 })
 
 fetchStudents()
+
+watch(selectedGroup, () => {
+  currentPage.value = 1
+})
 </script>
 
 <style scoped>
