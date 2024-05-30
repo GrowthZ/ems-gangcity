@@ -44,6 +44,8 @@
         </div>
 
         <VaDataTable
+          animation="fade-in-up"
+          class="va-data-table"
           :items="paginateItems"
           :columns="columns"
           :filter="filter"
@@ -77,30 +79,25 @@
 
 <script setup>
 import { ref, computed, watch } from 'vue'
-import { fetchDataSheet } from '../../stores/data-from-sheet'
+import { useStudentData } from './useStudentData'
 import StudentModal from './components/studentModal.vue'
+import { sleep } from '../../services/utils'
 
 const filter = ref('')
 const filterByFields = ref([])
 const filteredCount = ref(0)
 const selectedGroup = ref('')
-const items = ref([])
 const pageSize = 10 // Số lượng mục trên mỗi trang
 const currentPage = ref(1) // Trang hiện tại
-const isLoading = ref(false)
 const doShowModal = ref(false)
 const studentToEdit = (ref < import('./types').Student) | (null > null)
 
-const fetchStudents = async () => {
-  try {
-    isLoading.value = true
-    items.value = await fetchDataSheet('DanhSach')
-    console.log('Dữ liệu học viên:', items.value)
-    isLoading.value = false
-  } catch (error) {
-    console.error('Lỗi khi lấy dữ liệu học viên:', error)
-  }
-}
+const store = useStudentData()
+
+const items = computed(() => store.allStudents)
+const isLoading = computed(() => store.loading)
+
+store.load()
 
 const columns = [
   { key: 'id', sortable: true, label: 'ID' },
@@ -124,11 +121,8 @@ const uniqueGroups = computed(() => {
 
 const filteredItems = computed(() => {
   return items.value.filter((item) => {
-    // Kiểm tra xem đã chọn tất cả không
     const isAllSelected = selectedGroup.value === ''
-
     if (!isAllSelected) {
-      // Nếu đã chọn group, chỉ tìm kiếm trong group đó
       if (item?.group !== selectedGroup.value) {
         return false
       }
@@ -195,14 +189,23 @@ const isPaginationVisible = computed(() => {
   return totalPages.value > 1
 })
 
-fetchStudents()
+// fetchStudents()
 
 watch(selectedGroup, () => {
-  currentPage.value = 1
+  store.loading = true
+  sleep(100).then(() => {
+    store.loading = false
+    currentPage.value = 1
+  })
+  // currentPage.value = 1
 })
 </script>
-
-<style scoped>
+<style lang="scss" scoped>
+.va-data-table {
+  ::v-deep(.va-data-table__table-tr) {
+    border-bottom: 1px solid var(--va-background-border);
+  }
+}
 .pagination {
   margin-top: 10px;
 }

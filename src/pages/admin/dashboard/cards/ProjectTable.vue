@@ -13,7 +13,7 @@ const columns = defineVaDataTableColumns([
   { label: 'Team', key: 'team', sortable: true },
 ])
 
-const pagination = ref<Pagination>({ page: 1, perPage: 5, total: 0 })
+const pagination = ref<Pagination>({ page: 1, perPage: 10, total: 0 })
 const { projects, isLoading, sorting } = useProjects({
   pagination,
 })

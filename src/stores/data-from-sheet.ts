@@ -4,6 +4,8 @@ import axios from 'axios'
 const sheetId = '1rNBjkAxE0-F4V_YYj6fOJ6aRnHucugKNBGnA63c0o6U'
 const apiKey = 'AIzaSyCIwuR3WozVRKnXk9sHn7qmqqc50eN7g-A'
 const baseUrl = 'https://sheets.googleapis.com/v4/spreadsheets'
+// const appScriptUrl =
+//   'https://script.google.com/macros/s/AKfycbwGWQNceTo2VTDfEGHlpOZLVmfSn12MFg0dlVQZ2E6xhO63913lYZdfLfFzYbgsv7k/exec'
 
 // Tạo một Axios instance để gửi các yêu cầu HTTP
 const axiosInstance = axios.create()
@@ -17,7 +19,6 @@ export async function fetchDataSheet(sheetName: string): Promise<any> {
     const response = await axiosInstance.get(sheetUrl)
     const data = convertData(response.data.values)
     console.log(`Dữ liệu từ sheet "${sheetName}" đã được lưu vào file`)
-
     return data
   } catch (error) {
     console.error(`Lỗi khi lấy dữ liệu từ sheet "${sheetName}":`, error)
@@ -35,6 +36,23 @@ function convertData(data: any[][]): any[] {
     }
     convertedData.push(obj)
   }
-
-  return convertedData
+  return reverseArray(convertedData)
 }
+
+function reverseArray(array: string | any[]) {
+  const reversedArray = []
+  for (let i = array.length - 1; i >= 0; i--) {
+    reversedArray.push(array[i])
+  }
+  return reversedArray
+}
+
+export const DataSheet = {
+  student: 'DanhSach',
+  teacher: 'GiaoVien',
+  calendar: 'LichDay',
+  group: 'LopHoc2',
+  location: 'CoSo',
+}
+
+// export const addData = async (action: string, param: string) => {}

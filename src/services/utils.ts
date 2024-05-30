@@ -9,4 +9,9 @@ export const validators = {
     return pattern.test(v) || 'Please enter a valid email address'
   },
   required: (v: any) => !!v || 'This field is required',
+
+  checkSelected: (v: any) => {
+    console.log('Selected value:', v.value)
+    return (v !== null && v !== undefined) || 'Hãy chọn một giá trị'
+  },
 }
