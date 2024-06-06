@@ -73,7 +73,6 @@ const customFilteringFn = (source, cellData) => {
 }
 
 const getColorById = (id) => {
-  console.log('ID:', id)
   const colorIndex = id % colors.length
   return colors[colorIndex]
 }

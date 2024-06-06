@@ -31,6 +31,16 @@ export default {
       meta: {
         icon: 'face',
       },
+      children: [
+        {
+          name: 'teacher-list',
+          displayName: 'menu.teacher-list',
+        },
+        {
+          name: 'teacher-salary',
+          displayName: 'menu.teacher-salary',
+        },
+      ],
     },
     {
       name: 'calendars',

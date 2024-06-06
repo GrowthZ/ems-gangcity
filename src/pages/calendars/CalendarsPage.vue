@@ -29,6 +29,7 @@
               size="small"
               :disabled="value ? true : false"
               class="rounded"
+              @click="showAttendanceModal(row)"
             >
               {{ value ? 'Đã điểm danh ✓' : 'Điểm danh' }}
             </VaButton>
@@ -80,6 +81,20 @@
         }
       "
     />
+
+    <AttendanceModal
+      v-model="doShowAttendanceModal"
+      :calendar="calendarToEdit"
+      :teachers="teachers"
+      :centers="centers"
+      :groups="groups"
+      @close="cancel"
+      @save="
+        (calendar) => {
+          onCalendarSave(calendar)
+        }
+      "
+    />
   </VaModal>
 </template>
 
@@ -89,6 +104,7 @@ import { useData } from '../../stores/use-data'
 import { DataSheet } from '../../stores/data-from-sheet'
 import { VaCard, VaCardContent, VaChip, VaDataTable, VaIcon, VaInput, VaButton, useToast } from 'vuestic-ui'
 import CalendarModal from './widgets/CalendarModal.vue'
+import AttendanceModal from './widgets/AttendanceModal.vue'
 
 const data = useData()
 const calendars = computed(() => data.filteredData)
@@ -117,6 +133,7 @@ watch(anotherData, (newData) => {
 })
 
 const doShowModal = ref(false)
+const doShowAttendanceModal = ref(false)
 const calendarToEdit = ref(null)
 
 // const showEditCalendarModal = (calendar) => {
@@ -127,6 +144,11 @@ const calendarToEdit = ref(null)
 const showAddCalendarModal = () => {
   calendarToEdit.value = null
   doShowModal.value = true
+}
+
+const showAttendanceModal = (calendar) => {
+  calendarToEdit.value = calendar
+  doShowAttendanceModal.value = true
 }
 
 const { init: notify } = useToast()

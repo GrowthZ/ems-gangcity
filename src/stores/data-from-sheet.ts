@@ -53,6 +53,7 @@ export const DataSheet = {
   calendar: 'LichDay',
   group: 'LopHoc2',
   location: 'CoSo',
+  attendance: 'DiemDanh',
 }
 
 // export const addData = async (action: string, param: string) => {}

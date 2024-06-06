@@ -6,9 +6,7 @@ import { fetchDataSheet } from '../../stores/data-from-sheet'
 const fetchStudents = async () => {
   try {
     await sleep(1000)
-    const data = await fetchDataSheet('DanhSach')
-    console.log('Dữ liệu học viên 2:', data)
-    return data
+    return await fetchDataSheet('DanhSach')
   } catch (error) {
     console.error('Lỗi khi lấy dữ liệu học viên:', error)
   }

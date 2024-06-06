@@ -48,12 +48,25 @@ const routes: Array<RouteRecordRaw> = [
       },
       {
         name: 'teachers',
-        path: 'teachers',
-        component: () => import('../pages/teachers/Teacher.vue'),
+        path: '/teachers',
+        component: RouteViewComponent,
+
+        children: [
+          {
+            name: 'teacher-list',
+            path: 'teacher-list',
+            component: () => import('../pages/teachers/Teacher.vue'),
+          },
+          {
+            name: 'teacher-salary',
+            path: 'teacher-salary',
+            component: () => import('../pages/salaries/SalaryPage.vue'),
+          },
+        ],
       },
       {
         name: 'calendars',
-        path: 'calendars',
+        path: '/calendars',
         component: () => import('../pages/calendars/CalendarsPage.vue'),
       },
       {

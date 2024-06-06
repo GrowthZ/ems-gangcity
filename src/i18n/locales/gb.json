@@ -57,7 +57,10 @@
     "students": "Students",
     "teachers": "Teachers",
     "calendars": "Calendars",
-    "projects": "Projects"
+    "projects": "Projects",
+    "tasks": "Tasks",
+    "teacher-list": "Danh sách",
+    "teacher-salary": "Bảng lương"
   },
   "messages": {
     "all": "See all messages",
