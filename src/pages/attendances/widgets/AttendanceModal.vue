@@ -41,7 +41,7 @@
         :no-options-text="'Không tìm thấy học viên'"
         @click="clearStudentAdd"
       />
-      <VaScrollContainer class="max-h-[450px]" :color="currentColor" vertical>
+      <VaScrollContainer class="max-h-[450px]" color="transparent" vertical>
         <div class="flex flex-col mt-4">
           <section v-if="otherStudents?.length">
             <div
