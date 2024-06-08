@@ -133,6 +133,11 @@ const routes: Array<RouteRecordRaw> = [
     path: '/404',
     component: () => import('../pages/404.vue'),
   },
+  {
+    name: 'test',
+    path: '/test',
+    component: () => import('../pages/Test.vue'),
+  },
 ]
 
 const router = createRouter({

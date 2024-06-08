@@ -4,8 +4,8 @@ import axios from 'axios'
 const sheetId = '1rNBjkAxE0-F4V_YYj6fOJ6aRnHucugKNBGnA63c0o6U'
 const apiKey = 'AIzaSyCIwuR3WozVRKnXk9sHn7qmqqc50eN7g-A'
 const baseUrl = 'https://sheets.googleapis.com/v4/spreadsheets'
-// const appScriptUrl =
-//   'https://script.google.com/macros/s/AKfycbwGWQNceTo2VTDfEGHlpOZLVmfSn12MFg0dlVQZ2E6xhO63913lYZdfLfFzYbgsv7k/exec'
+const scriptUrl =
+  'https://script.google.com/macros/s/AKfycby0_EvfFeMRcRkelOS6qP_tEoD7wWYxyxDmYNv4Vv_vmXnebYYGXWipSerivXuPdYY/exec'
 
 // Tạo một Axios instance để gửi các yêu cầu HTTP
 const axiosInstance = axios.create()
@@ -56,4 +56,25 @@ export const DataSheet = {
   attendance: 'DiemDanh',
 }
 
-// export const addData = async (action: string, param: string) => {}
+export const Action = {
+  markAttendance: 'markAttendance',
+  updateAttendance: 'updateAttendance',
+  getAttendance: 'getAttendance',
+}
+
+export const sendRequest = async (action: string, param: string) => {
+  try {
+    const response = await axiosInstance.get(`${scriptUrl}?action=${action}&param=${JSON.stringify(param)}`)
+    console.log(`Dữ liệu đã được thêm vào sheet`)
+    return {
+      status: 'success',
+      data: response.data,
+    }
+  } catch (error) {
+    console.error('Lỗi khi thêm dữ liệu:', error)
+    return {
+      status: 'error',
+      error: error.message,
+    }
+  }
+}

@@ -41,7 +41,7 @@
         :no-options-text="'Không tìm thấy học viên'"
         @click="clearStudentAdd"
       />
-      <VaScrollContainer class="max-h-[350px]" color="transparent" vertical>
+      <VaScrollContainer :class="scrollContainerClass" color="transparent" vertical>
         <div class="flex flex-col mt-4">
           <section v-if="otherStudents?.length">
             <div
@@ -103,20 +103,24 @@
         />
     </div> -->
 
-  <!-- <VaForm class="flex flex-col gap-2">
-    <div class="flex justify-end flex-col-reverse sm:flex-row mt-4 gap-2">
-      <VaButton preset="secondary" color="secondary">Huỷ</VaButton>
-      <VaButton color="primary">{{ saveButtonLabel }}</VaButton>
-    </div>
-  </VaForm> -->
+  <div :class="fixedBottomClass">
+    <VaForm class="flex flex-col gap-2">
+      <div class="flex justify-end flex-col-reverse sm:flex-row gap-2">
+        <VaButton preset="secondary" color="secondary" @click="$emit('close')">Huỷ</VaButton>
+        <VaButton color="primary" @click="onSave">Điểm danh</VaButton>
+      </div>
+    </VaForm>
+  </div>
+  <div></div>
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 
 const props = defineProps({
   calendar: Object,
   students: Array,
+  senData: Function,
   //   saveButtonLabel: String,
 })
 
@@ -126,6 +130,8 @@ const students = ref(props.students)
 const selection = ref([])
 const studentAdd = ref('')
 const otherStudents = ref([])
+
+const scrollContainerHeight = ref('')
 // const doShowNote = ref(true)
 
 const studentOthers = computed(() => {
@@ -143,12 +149,22 @@ const studentOptions = computed(() => {
   }))
 })
 
-console.log(otherStudents.value)
-
 const studentsOfGroup = computed(() => {
   return students.value.filter((student) => student.group === calendar.value.group)
 })
 
+const studentMarks = computed(() => {
+  const selectedCodes = selection.value
+  const sm = students.value.filter((student) => selectedCodes.includes(student.code))
+  return sm.map((student) => [
+    calendar.value.attendanceCode,
+    student.code,
+    student.fullname,
+    calendar.value.dateTime,
+    student.group,
+    calendar.value.group,
+  ])
+})
 const getStudent = (code) => {
   return students.value.find((student) => student.code === code)
 }
@@ -176,6 +192,34 @@ watch(otherStudents, () => {
 const clearStudentAdd = () => {
   studentAdd.value = null
 }
+
+const emit = defineEmits(['close', 'save'])
+const onSave = () => {
+  emit('save', studentMarks.value)
+}
+const fixedBottomClass =
+  window.innerWidth < 768 ? 'fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-200' : 'mt-5'
+// Hàm để tính toán chiều cao cần thiết cho VaScrollContainer
+const calculateScrollContainerHeight = () => {
+  const isMobile = window.innerWidth < 768 // Xác định xem màn hình có phải là thiết bị di động hay không
+  // Nếu là thiết bị di động, sử dụng max-height cách bottom 200px, ngược lại sử dụng max-height 350px
+  if (isMobile) {
+    scrollContainerHeight.value = `calc(100vh - 200px)`
+  } else {
+    scrollContainerHeight.value = `400px`
+  }
+}
+
+// Xác định class cho VaScrollContainer dựa trên điều kiện của màn hình
+const scrollContainerClass = {
+  'max-h-[400px]': !scrollContainerHeight.value, // Sử dụng max-height 350px nếu không phải là thiết bị di động
+  'h-full': scrollContainerHeight.value, // Sử dụng chiều cao đã tính toán nếu là thiết bị di động
+  'overflow-y-auto': true, // Đảm bảo nội dung có thể cuộn khi chiều cao vượt quá max-height
+}
+
+onMounted(() => {
+  calculateScrollContainerHeight()
+})
 </script>
 <style lang="scss" scoped>
 .va-select-content__autocomplete {
@@ -199,5 +243,9 @@ const clearStudentAdd = () => {
 }
 .va-select__dropdown .va-select__dropdown-item {
   display: none;
+}
+.fixed {
+  position: fixed;
+  z-index: 1000; /* Đảm bảo nút ở trên cùng */
 }
 </style>
