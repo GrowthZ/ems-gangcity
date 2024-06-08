@@ -1,6 +1,6 @@
 <template>
-  <div>
-    <h5 class="page-title mt-5">Điểm danh</h5>
+  <div class="sm:mt-12 xs:mt-12">
+    <h5 class="page-title">Điểm danh</h5>
   </div>
   <VaCard stripe stripe-color="primary" class="p-1" outlined>
     <VaCardContent>
