@@ -1,5 +1,5 @@
 <template>
-  <div class="sm:mt-12 xs:mt-12">
+  <div class="sm:pt-12 xs:pt-12">
     <h5 class="page-title">Điểm danh</h5>
   </div>
   <VaCard stripe stripe-color="primary" class="p-1" outlined>
@@ -41,7 +41,7 @@
         :no-options-text="'Không tìm thấy học viên'"
         @click="clearStudentAdd"
       />
-      <VaScrollContainer class="max-h-[400px]" color="transparent" vertical>
+      <VaScrollContainer class="max-h-[350px]" color="transparent" vertical>
         <div class="flex flex-col mt-4">
           <section v-if="otherStudents?.length">
             <div
