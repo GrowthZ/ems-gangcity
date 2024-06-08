@@ -1,6 +1,6 @@
 <template>
   <div class="app-navbar-actions">
-    <GithubButton v-if="!isMobile" class="app-navbar-actions__item" />
+    <GithubButton v-if="!isMobile" class="app-navbar-actions__item" hidden />
     <VaButton
       v-if="!isMobile"
       preset="secondary"
@@ -8,6 +8,7 @@
       target="_blank"
       color="textPrimary"
       class="app-navbar-actions__item flex-shrink-0 mx-0"
+      hidden
     >
       {{ t('aboutVuesticAdmin') }}
     </VaButton>
@@ -18,6 +19,7 @@
       target="_blank"
       color="textPrimary"
       class="app-navbar-actions__item flex-shrink-0 mx-0"
+      hidden
     >
       {{ t('helpAndSupport') }}
     </VaButton>

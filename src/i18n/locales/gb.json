@@ -54,13 +54,15 @@
     "404": "404",
     "faq": "FAQ",
     "users": "Users",
-    "students": "Students",
-    "teachers": "Teachers",
+    "students": "Học viên",
+    "teachers": "Giáo viên",
     "calendars": "Calendars",
     "projects": "Projects",
     "tasks": "Tasks",
     "teacher-list": "Danh sách",
-    "teacher-salary": "Bảng lương"
+    "teacher-salary": "Bảng lương",
+    "attendances": "Điểm danh",
+    "calendar-list": "Lịch học"
   },
   "messages": {
     "all": "See all messages",

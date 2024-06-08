@@ -65,9 +65,9 @@ const routes: Array<RouteRecordRaw> = [
         ],
       },
       {
-        name: 'calendars',
-        path: '/calendars',
-        component: () => import('../pages/calendars/CalendarsPage.vue'),
+        name: 'attendances',
+        path: 'attendances',
+        component: () => import('../pages/attendances/AttendancePage.vue'),
       },
       {
         name: 'payments',

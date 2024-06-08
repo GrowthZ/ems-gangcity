@@ -4,10 +4,10 @@
       <div class="left">
         <Transition v-if="isMobile" name="icon-fade" mode="out-in">
           <VaIcon
-            color="primary"
+            color="danger"
             :name="isSidebarMinimized ? 'menu' : 'close'"
-            size="24px"
-            style="margin-top: 3px"
+            size="30px"
+            style="margin-top: 0px"
             @click="isSidebarMinimized = !isSidebarMinimized"
           />
         </Transition>

@@ -43,12 +43,13 @@ export default {
       ],
     },
     {
-      name: 'calendars',
-      displayName: 'menu.calendars',
+      name: 'attendances',
+      displayName: 'menu.attendances',
       meta: {
-        icon: 'calendar_month',
+        icon: 'group',
       },
     },
+
     // {
     //   name: 'users',
     //   displayName: 'menu.users',
