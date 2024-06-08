@@ -1,6 +1,6 @@
 <template>
   <div>
-    <h5 class="page-title">Điểm danh</h5>
+    <h5 class="page-title mt-5">Điểm danh</h5>
   </div>
   <VaCard stripe stripe-color="primary" class="p-1" outlined>
     <VaCardContent>
@@ -41,7 +41,7 @@
         :no-options-text="'Không tìm thấy học viên'"
         @click="clearStudentAdd"
       />
-      <VaScrollContainer class="max-h-[450px]" color="transparent" vertical>
+      <VaScrollContainer class="max-h-[400px]" color="transparent" vertical>
         <div class="flex flex-col mt-4">
           <section v-if="otherStudents?.length">
             <div
@@ -103,12 +103,12 @@
         />
     </div> -->
 
-  <VaForm class="flex flex-col gap-2">
+  <!-- <VaForm class="flex flex-col gap-2">
     <div class="flex justify-end flex-col-reverse sm:flex-row mt-4 gap-2">
       <VaButton preset="secondary" color="secondary">Huỷ</VaButton>
       <VaButton color="primary">{{ saveButtonLabel }}</VaButton>
     </div>
-  </VaForm>
+  </VaForm> -->
 </template>
 
 <script setup>
@@ -117,12 +117,12 @@ import { ref, computed, watch } from 'vue'
 const props = defineProps({
   calendar: Object,
   students: Array,
-  saveButtonLabel: String,
+  //   saveButtonLabel: String,
 })
 
 const calendar = ref(props.calendar)
 const students = ref(props.students)
-const saveButtonLabel = ref(props.saveButtonLabel)
+// const saveButtonLabel = ref(props.saveButtonLabel)
 const selection = ref([])
 const studentAdd = ref('')
 const otherStudents = ref([])

@@ -87,7 +87,9 @@
     mobile-fullscreen
     close-button
     stateful
-    hide-default-actions
+    fixed-layout
+    ok-text="Điểm danh"
+    cancel-text="Hủy"
   >
     <AttendanceModal
       :calendar="attendanceToEdit"
