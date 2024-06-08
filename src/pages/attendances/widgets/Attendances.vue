@@ -59,6 +59,7 @@
                 icon="mso-checklist"
                 color="primary"
                 class="gap-2"
+                @click="showAttendanceModal(calendar)"
                 >Điểm danh</VaButton
               >
               <VaButton
@@ -79,10 +80,26 @@
       Không có lịch dạy nào. Hãy thêm lịch dạy mới.
     </VaAlert>
   </VaInnerLoading>
+  <VaModal
+    ref="modal"
+    v-model="doShowAttendanceModal"
+    size="small"
+    mobile-fullscreen
+    close-button
+    stateful
+    hide-default-actions
+  >
+    <AttendanceModal
+      :calendar="attendanceToEdit"
+      :save-button-label="isUpdateAttendance ? 'Cập nhật' : 'Điểm danh'"
+      :students="students"
+    />
+  </VaModal>
 </template>
 
 <script lang="ts" setup>
 import { ref, computed, watch } from 'vue'
+import AttendanceModal from './AttendanceModal.vue'
 
 const searchValue = ref('')
 const props = defineProps<{
@@ -94,13 +111,15 @@ const props = defineProps<{
 const calendars = ref<any[]>(props.calendars)
 const loading = ref(props.loading)
 
-// const doShowAttendanceModal = ref(false)
-// const attendanceToEdit = ref(null)
+const doShowAttendanceModal = ref(false)
+const attendanceToEdit = ref(undefined)
+const isUpdateAttendance = ref(false)
 
-// const showAttendanceModal = (attendance: any) => {
-//   attendanceToEdit.value = attendance
-//   doShowAttendanceModal.value = true
-// }
+const showAttendanceModal = (attendance: any) => {
+  attendanceToEdit.value = attendance
+  doShowAttendanceModal.value = true
+  isUpdateAttendance.value = attendance.attendanceCode !== ''
+}
 
 watch(
   () => props.calendars,

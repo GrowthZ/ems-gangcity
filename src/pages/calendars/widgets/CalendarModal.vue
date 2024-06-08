@@ -126,7 +126,6 @@ const { confirm } = useModal()
 const onSave = () => {
   console.log(isValid)
   if (validate()) {
-    console.log('newCalendar.value:', newCalendar.value)
     emit('save', newCalendar.value)
   } else {
     const agreed = confirm({
