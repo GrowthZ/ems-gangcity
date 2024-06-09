@@ -156,7 +156,6 @@ const sendData = async (data: any) => {
       color: 'danger',
     })
   }
-  attendanceToEdit.value.status = 1
   sending.value = false
 }
 
