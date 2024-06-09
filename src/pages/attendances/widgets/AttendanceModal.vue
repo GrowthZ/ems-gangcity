@@ -215,7 +215,7 @@ const calculateScrollContainerHeight = () => {
   const isMobile = window.innerWidth < 768 // Xác định xem màn hình có phải là thiết bị di động hay không
   // Nếu là thiết bị di động, sử dụng max-height cách bottom 200px, ngược lại sử dụng max-height 350px
   if (isMobile) {
-    scrollContainerHeight.value = `calc(100vh - 200px)`
+    scrollContainerHeight.value = `calc(100vh - 300px)`
   } else {
     scrollContainerHeight.value = `400px`
   }
@@ -223,7 +223,7 @@ const calculateScrollContainerHeight = () => {
 
 // Xác định class cho VaScrollContainer dựa trên điều kiện của màn hình
 const scrollContainerClass = {
-  'max-h-[400px]': !scrollContainerHeight.value, // Sử dụng max-height 350px nếu không phải là thiết bị di động
+  'max-h-[350px]': !scrollContainerHeight.value, // Sử dụng max-height 350px nếu không phải là thiết bị di động
   'h-full': scrollContainerHeight.value, // Sử dụng chiều cao đã tính toán nếu là thiết bị di động
   'overflow-y-auto': true, // Đảm bảo nội dung có thể cuộn khi chiều cao vượt quá max-height
 }
