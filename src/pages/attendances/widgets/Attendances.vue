@@ -135,7 +135,7 @@ const showAttendanceModal = (attendance: any) => {
   isUpdateAttendance.value = attendance.attendanceCode !== ''
 }
 
-const sendData = async (data) => {
+const sendData = async (data: any) => {
   console.log(Action.markAttendance, data)
   sending.value = true
   const res = await sendRequest(Action.markAttendance, data)

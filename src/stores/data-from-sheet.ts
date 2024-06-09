@@ -74,7 +74,7 @@ export const sendRequest = async (action: string, param: string) => {
     console.error('Lỗi khi thêm dữ liệu:', error)
     return {
       status: 'error',
-      error: error.message,
+      error: error,
     }
   }
 }
