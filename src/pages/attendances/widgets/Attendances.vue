@@ -150,6 +150,7 @@ const sendData = async (data: any) => {
       message: `Điểm danh thành công!`,
       color: 'success',
     })
+    updateCalendars(data[0][0])
   } else {
     notify({
       message: `Điểm danh thất bại!`,
@@ -209,6 +210,14 @@ const filteredCalendars = computed(() => {
     )
   })
 })
+const updateCalendars = (code: string) => {
+  calendars.value = calendars.value.map((calendar) => {
+    if (calendar.attendanceCode == code) {
+      calendar.status = 1
+    }
+    return calendar
+  })
+}
 </script>
 <style scoped>
 .va-button .icon {
