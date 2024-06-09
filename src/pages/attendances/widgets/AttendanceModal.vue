@@ -104,7 +104,9 @@
     <VaForm class="flex flex-col gap-2">
       <div class="flex justify-end flex-col-reverse sm:flex-row gap-2">
         <VaButton preset="secondary" color="secondary" @click="$emit('close')">Huỷ</VaButton>
-        <VaButton color="primary" @click="onSave">{{ isUpdate ? 'Cập nhật' : 'Điểm danh' }}</VaButton>
+        <VaButton :disabled="!isValidate" color="primary" @click="onSave">{{
+          isUpdate ? 'Cập nhật' : 'Điểm danh'
+        }}</VaButton>
       </div>
     </VaForm>
   </div>
@@ -163,6 +165,10 @@ const studentMarks = computed(() => {
     student.group,
     calendar.value.group,
   ])
+})
+
+const isValidate = computed(() => {
+  return selection.value.length > 0
 })
 const getStudent = (code) => {
   return students.value.find((student) => student.code === code)
