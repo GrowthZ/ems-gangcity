@@ -3,14 +3,14 @@
     "short_name": "Gang City",
     "icons": [
         {
-            "src": "/android-chrome-192x192.png",
+            "src": "/logo3.jpg",
             "sizes": "192x192",
-            "type": "image/png"
+            "type": "image/jpg"
         },
         {
-            "src": "/android-chrome-512x512.png",
+            "src": "/logo2.jpg",
             "sizes": "512x512",
-            "type": "image/png"
+            "type": "image/jpg"
         }
     ],
     "theme_color": "#ffffff",

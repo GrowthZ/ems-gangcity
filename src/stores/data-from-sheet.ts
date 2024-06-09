@@ -60,6 +60,7 @@ export const Action = {
   markAttendance: 'markAttendance',
   updateAttendance: 'updateAttendance',
   getMarkedStudents: 'getMarkedStudents',
+  changeTeacher: 'changeTeacherOfCalendar',
 }
 
 export const sendRequest = async (action: string, param: string) => {

@@ -56,7 +56,12 @@
                   @click="showAttendanceModal(calendar, true)"
                   >Sửa điểm danh</VaButton
                 >
-                <VaButton v-if="!checkCalendar(calendar)" preset="secondary" icon="mso-sync_alt" color="secondary"
+                <VaButton
+                  v-if="!checkCalendar(calendar)"
+                  preset="secondary"
+                  icon="mso-sync_alt"
+                  color="secondary"
+                  @click="showChangeTeacherModal(calendar)"
                   >Đổi giáo viên
                 </VaButton>
                 <VaButton
@@ -109,12 +114,26 @@
         "
       />
     </VaModal>
+    <VaModal v-slot="{ cancel, ok }" v-model="doShowChangeTeacherModal" size="small" hide-default-actions>
+      <ChangeTeacherModal
+        :calendar="attendanceToEdit"
+        :teachers="teachers"
+        @close="cancel"
+        @save="
+          (data) => {
+            changeTeacher(data)
+            ok()
+          }
+        "
+      />
+    </VaModal>
   </VaInnerLoading>
 </template>
 
 <script lang="ts" setup>
 import { ref, computed, watch } from 'vue'
 import AttendanceModal from './AttendanceModal.vue'
+import ChangeTeacherModal from './ChangeTeacherModal.vue'
 import { useToast } from 'vuestic-ui'
 import { Action, sendRequest } from '../../../stores/data-from-sheet'
 
@@ -123,6 +142,7 @@ const searchValue = ref('')
 const props = defineProps<{
   calendars: any
   students: any
+  teachers: any
   loading: boolean
 }>()
 
@@ -135,27 +155,33 @@ const doShowAttendanceModal = ref(false)
 const attendanceToEdit = ref(undefined)
 const isUpdateAttendance = ref(false)
 
+const doShowChangeTeacherModal = ref(false)
+
 const showAttendanceModal = (attendance: any, isUpdate: boolean) => {
   attendanceToEdit.value = attendance
   doShowAttendanceModal.value = true
   isUpdateAttendance.value = isUpdate
 }
 
+const showChangeTeacherModal = (calendar: any) => {
+  attendanceToEdit.value = calendar
+  doShowChangeTeacherModal.value = true
+}
+
+const showMessageBox = (message: string, color: string) => {
+  notify({
+    message: message,
+    color: color,
+  })
+}
 const sendData = async (data: any) => {
   sending.value = true
   const res = await sendRequest(Action.markAttendance, data)
-  console.log(res)
   if (res.status == 'success') {
-    notify({
-      message: `Điểm danh thành công!`,
-      color: 'success',
-    })
+    showMessageBox(`Điểm danh thành công!`, 'success')
     updateCalendars(data[0][0])
   } else {
-    notify({
-      message: `Điểm danh thất bại!`,
-      color: 'danger',
-    })
+    showMessageBox(`Điểm danh thất bại!`, 'danger')
   }
   sending.value = false
 }
@@ -163,23 +189,38 @@ const sendData = async (data: any) => {
 const updateData = async (data: any) => {
   sending.value = true
   const res = await sendRequest(Action.updateAttendance, data)
+  if (res.status == 'success') {
+    showMessageBox(`Cập nhật điểm danh thành công!`, 'success')
+  } else {
+    showMessageBox(`Cập nhật điểm danh thất bại!`, 'danger')
+  }
+  sending.value = false
+}
+
+const changeTeacher = async (data: any) => {
+  sending.value = true
+  const res = await sendRequest(Action.changeTeacher, data)
   console.log(res)
   if (res.status == 'success') {
-    notify({
-      message: `Cập nhật điểm danh thành công!`,
-      color: 'success',
-    })
+    showMessageBox(`Đổi giáo viên thành công!`, 'success')
+    changeTeacherOfCalendar(data)
   } else {
-    notify({
-      message: `Cập nhật thất bại!`,
-      color: 'danger',
-    })
+    showMessageBox(`Đổi giáo viên thất bại!`, 'danger')
   }
   sending.value = false
 }
 
 const checkCalendar = (calendar: any) => {
   return calendar.status == 1
+}
+
+const changeTeacherOfCalendar = (data: any) => {
+  calendars.value = calendars.value.map((calendar) => {
+    if (calendar.attendanceCode == data[0]) {
+      calendar.teacher = data[1]
+    }
+    return calendar
+  })
 }
 
 watch(

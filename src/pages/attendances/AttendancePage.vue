@@ -63,7 +63,7 @@
           </div>
         </div> -->
       </VaCollapse>
-      <Attendances :calendars="filteredItems" :students="students" :loading="loading" />
+      <Attendances :calendars="filteredItems" :students="students" :teachers="teachers" :loading="loading" />
     </VaCardContent>
   </VaCard>
 </template>
@@ -93,13 +93,15 @@ const anotherData = computed(() => data.anotherData)
 const loading = computed(() => data.loading)
 const students = ref(null)
 const locations = ref(null)
+const teachers = ref(null)
 
-data.load(DataSheet.calendar, [DataSheet.student, DataSheet.location])
+data.load(DataSheet.calendar, [DataSheet.student, DataSheet.location, DataSheet.teacher])
 
 watch(anotherData, (newData) => {
   if (newData) {
     students.value = newData[0]
     locations.value = newData[1]
+    teachers.value = newData[2]
   }
 })
 
