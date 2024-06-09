@@ -1,7 +1,7 @@
 <template>
   <div class="flex justify-between items-center">
     <div>
-      <h1 class="page-title">Điểm danh</h1>
+      <h1 class="page-title">Lịch dạy</h1>
     </div>
     <div v-if="filteredItems.length > 0">
       <span
@@ -132,7 +132,7 @@ const uniqueTeachers = computed(() => {
 })
 
 const filteredDoneCount = computed(() => {
-  return filteredItems.value.filter((item) => item.attendanceCode !== '').length || 0
+  return filteredItems.value.filter((item) => item.status == 1).length || 0
 })
 
 const getTextLocation = (code) => {

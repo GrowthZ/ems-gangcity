@@ -59,7 +59,7 @@ export const DataSheet = {
 export const Action = {
   markAttendance: 'markAttendance',
   updateAttendance: 'updateAttendance',
-  getAttendance: 'getAttendance',
+  getMarkedStudents: 'getMarkedStudents',
 }
 
 export const sendRequest = async (action: string, param: string) => {

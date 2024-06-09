@@ -48,23 +48,28 @@
               </p>
               <VaDivider class="my-3" />
               <div class="flex justify-between">
-                <VaButton v-if="calendar.attendanceCode !== ''" preset="secondary" icon="mso-edit" color="info"
+                <VaButton
+                  v-if="checkCalendar(calendar)"
+                  preset="secondary"
+                  icon="mso-edit"
+                  color="info"
+                  @click="showAttendanceModal(calendar, true)"
                   >Sửa điểm danh</VaButton
                 >
-                <VaButton v-if="calendar.attendanceCode == ''" preset="secondary" icon="mso-sync_alt" color="secondary"
+                <VaButton v-if="!checkCalendar(calendar)" preset="secondary" icon="mso-sync_alt" color="secondary"
                   >Đổi giáo viên
                 </VaButton>
                 <VaButton
-                  v-if="calendar.status == '0'"
+                  v-if="!checkCalendar(calendar)"
                   preset="primary"
                   icon="mso-checklist"
                   color="primary"
                   class="gap-2"
-                  @click="showAttendanceModal(calendar)"
+                  @click="showAttendanceModal(calendar, false)"
                   >Điểm danh</VaButton
                 >
                 <VaButton
-                  v-if="calendar.status != '0'"
+                  v-if="checkCalendar(calendar)"
                   preset="info"
                   icon="mso-check"
                   color="success"
@@ -94,10 +99,11 @@
       <AttendanceModal
         :calendar="attendanceToEdit"
         :students="students"
+        :is-update="isUpdateAttendance"
         @close="cancel"
         @save="
           (studentMarks) => {
-            sendData(studentMarks)
+            isUpdateAttendance ? updateData(studentMarks) : sendData(studentMarks)
             ok()
           }
         "
@@ -129,14 +135,13 @@ const doShowAttendanceModal = ref(false)
 const attendanceToEdit = ref(undefined)
 const isUpdateAttendance = ref(false)
 
-const showAttendanceModal = (attendance: any) => {
+const showAttendanceModal = (attendance: any, isUpdate: boolean) => {
   attendanceToEdit.value = attendance
   doShowAttendanceModal.value = true
-  isUpdateAttendance.value = attendance.attendanceCode !== ''
+  isUpdateAttendance.value = isUpdate
 }
 
 const sendData = async (data: any) => {
-  console.log(Action.markAttendance, data)
   sending.value = true
   const res = await sendRequest(Action.markAttendance, data)
   console.log(res)
@@ -151,7 +156,30 @@ const sendData = async (data: any) => {
       color: 'danger',
     })
   }
+  attendanceToEdit.value.status = 1
   sending.value = false
+}
+
+const updateData = async (data: any) => {
+  sending.value = true
+  const res = await sendRequest(Action.updateAttendance, data)
+  console.log(res)
+  if (res.status == 'success') {
+    notify({
+      message: `Cập nhật điểm danh thành công!`,
+      color: 'success',
+    })
+  } else {
+    notify({
+      message: `Cập nhật thất bại!`,
+      color: 'danger',
+    })
+  }
+  sending.value = false
+}
+
+const checkCalendar = (calendar: any) => {
+  return calendar.status == 1
 }
 
 watch(
