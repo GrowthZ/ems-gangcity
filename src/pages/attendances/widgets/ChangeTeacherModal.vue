@@ -53,7 +53,6 @@ const uniqueTeachers = computed(() => {
     value: teacher.nickname,
     text: teacher.nickname + ' - ' + teacher.fullname,
   }))
-  // uniqueTeachersArray.unshift({ value: '', text: 'Tất cả' })
   return teachers.value ? uniqueTeachersArray : []
 })
 

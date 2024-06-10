@@ -70,6 +70,11 @@ const routes: Array<RouteRecordRaw> = [
         component: () => import('../pages/attendances/AttendancePage.vue'),
       },
       {
+        name: 'attendances-student-missing',
+        path: 'attendances-student-missing',
+        component: () => import('../pages/attendances/AttendanceMissPage.vue'),
+      },
+      {
         name: 'payments',
         path: '/payments',
         component: RouteViewComponent,

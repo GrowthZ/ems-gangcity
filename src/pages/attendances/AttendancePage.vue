@@ -5,11 +5,11 @@
     </div>
     <div v-if="filteredItems.length > 0">
       <span
-        ><VaIcon :name="`mso-event_available`" class="font-light mb-2 pr-2" color="success" size="2rem" /><span
-          class="text-success mb-2 text-primary text-lg leading-8 font-bold"
-          >{{ filteredDoneCount + ' / ' + filteredItems.length }}</span
-        ></span
-      >
+        ><VaIcon :name="`mso-event_available`" class="font-light mb-2 pr-2" color="success" size="2rem" />
+        <span class="text-success mb-2 text-primary text-lg leading-8 font-bold">
+          {{ filteredDoneCount + ' / ' + filteredItems.length }}
+        </span>
+      </span>
     </div>
   </div>
   <VaCard>

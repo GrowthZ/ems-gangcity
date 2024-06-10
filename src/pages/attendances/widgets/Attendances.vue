@@ -200,7 +200,6 @@ const updateData = async (data: any) => {
 const changeTeacher = async (data: any) => {
   sending.value = true
   const res = await sendRequest(Action.changeTeacher, data)
-  console.log(res)
   if (res.status == 'success') {
     showMessageBox(`Đổi giáo viên thành công!`, 'success')
     changeTeacherOfCalendar(data)

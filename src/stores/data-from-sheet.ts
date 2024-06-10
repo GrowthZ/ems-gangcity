@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { useToast } from 'vuestic-ui'
 
 // Khai báo các thông tin cần thiết
 const sheetId = '1rNBjkAxE0-F4V_YYj6fOJ6aRnHucugKNBGnA63c0o6U'
@@ -9,6 +10,7 @@ const scriptUrl =
 
 // Tạo một Axios instance để gửi các yêu cầu HTTP
 const axiosInstance = axios.create()
+const { init: notify } = useToast()
 
 export async function fetchDataSheet(sheetName: string): Promise<any> {
   try {
@@ -54,6 +56,7 @@ export const DataSheet = {
   group: 'LopHoc2',
   location: 'CoSo',
   attendance: 'DiemDanh',
+  attendanceMissing: 'DiemDanhNghi',
 }
 
 export const Action = {
@@ -61,6 +64,7 @@ export const Action = {
   updateAttendance: 'updateAttendance',
   getMarkedStudents: 'getMarkedStudents',
   changeTeacher: 'changeTeacherOfCalendar',
+  updateStudentMissing: 'updateStudentMissing',
 }
 
 export const sendRequest = async (action: string, param: string) => {
@@ -78,4 +82,11 @@ export const sendRequest = async (action: string, param: string) => {
       error: error,
     }
   }
+}
+
+export const showMessageBox = (message: string, color: string) => {
+  notify({
+    message: message,
+    color: color,
+  })
 }

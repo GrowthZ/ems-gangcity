@@ -49,6 +49,13 @@ export default {
         icon: 'group',
       },
     },
+    {
+      name: 'attendances-student-missing',
+      displayName: 'menu.attendances-student-missing',
+      meta: {
+        icon: 'free_cancellation',
+      },
+    },
 
     // {
     //   name: 'users',
