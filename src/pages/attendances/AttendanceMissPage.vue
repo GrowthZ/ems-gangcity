@@ -24,7 +24,7 @@
           :disable-date="disableEndDate"
           label="Kết thúc"
         />
-        <VaInput v-model="searchValue" class="mb-4" placeholder="Tìm kiếm nhanh..." label="Tìm kiếm">
+        <VaInput v-model="searchValue" class="mb-4" placeholder="Nhập tên, lớp ..." label="Tìm kiếm">
           <template #appendInner>
             <VaIcon color="secondary" name="mso-search" />
           </template>

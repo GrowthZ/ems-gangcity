@@ -38,12 +38,13 @@
         name="notes"
         class="w-full pt-4"
       />
+      <p class="va-text-secondary opacity-70 pt-2">* Vui lòng sửa ghi chú để có thể cập nhật</p>
     </VaCardContent>
   </VaCard>
   <VaForm class="flex flex-col gap-2 pt-3">
     <div class="flex justify-end flex-col-reverse sm:flex-row xs:flex-row gap-2">
       <VaButton preset="secondary" color="secondary" @click="emit('close')">Huỷ</VaButton>
-      <VaButton color="primary" @click="onSave">Cập nhật</VaButton>
+      <VaButton :disabled="isValidated" color="primary" @click="onSave">Cập nhật</VaButton>
     </div>
   </VaForm>
 </template>
@@ -58,6 +59,7 @@ const props = defineProps<{
 const studentMissing = ref<any>(props.studentMissing)
 const statusList = ref<any>(props.statusList)
 const selectedStatus = ref<any>('')
+const currentNote = props.studentMissing.note
 
 const statusOptions = computed(() => {
   const statusArray = Array.from(statusList.value)
@@ -68,6 +70,10 @@ const statusOptions = computed(() => {
       color: status.color,
     }))
   return statusList.value ? statusArray : []
+})
+
+const isValidated = computed(() => {
+  return studentMissing.value.note == currentNote || studentMissing.value.note == ''
 })
 
 const emit = defineEmits(['close', 'save'])
