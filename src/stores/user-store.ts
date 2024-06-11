@@ -3,7 +3,6 @@ import { defineStore } from 'pinia'
 export const useUserStore = defineStore('user', {
   state: () => {
     const user = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')!) : null
-    console.log('user', user)
     return {
       userName: user.username,
       role: user.role,

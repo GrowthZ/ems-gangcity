@@ -36,11 +36,14 @@ export default {
           name: 'teacher-list',
           displayName: 'menu.teacher-list',
         },
-        {
-          name: 'teacher-salary',
-          displayName: 'menu.teacher-salary',
-        },
       ],
+    },
+    {
+      name: 'teacher-salary',
+      displayName: 'menu.teacher-salary',
+      meta: {
+        icon: 'payments',
+      },
     },
     {
       name: 'attendances',

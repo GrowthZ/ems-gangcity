@@ -1,7 +1,7 @@
 <template>
   <VaSidebar v-model="writableVisible" :width="sidebarWidth" :color="color" minimized-width="0">
     <VaAccordion v-model="value" multiple>
-      <VaCollapse v-for="(route, index) in navigationRoutes.routes" :key="index">
+      <VaCollapse v-for="(route, index) in routers" :key="index">
         <template #header="{ value: isCollapsed }">
           <VaSidebarItem
             :to="route.children ? undefined : { name: route.name }"
@@ -50,7 +50,7 @@
   </VaSidebar>
 </template>
 <script lang="ts">
-import { defineComponent, watch, ref, computed } from 'vue'
+import { defineComponent, watch, ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 
 import { useI18n } from 'vue-i18n'
@@ -72,6 +72,7 @@ export default defineComponent({
     const { t } = useI18n()
 
     const value = ref<boolean[]>([])
+    const routers = ref<any[]>([])
 
     const writableVisible = computed({
       get: () => props.visible,
@@ -88,6 +89,27 @@ export default defineComponent({
       return section.children.some(({ name }) => route.path.endsWith(`${name}`))
     }
 
+    onMounted(() => {
+      routers.value = navigationRoutes.routes.filter((route) => isShow(route.name))
+    })
+
+    const isShow = (routeName: string) => {
+      const user = JSON.parse(localStorage.getItem('user')!) || {}
+      const isTeacher = user.role === 'teacher'
+      const isManager = user.role === 'manager'
+      const isAdmin = user.role === 'admin'
+      const routeTeacher = ['attendances', 'teacher-salary']
+      if (isTeacher) {
+        return routeTeacher.includes(routeName)
+      }
+
+      if (isManager || isAdmin) {
+        return true
+      }
+
+      return false
+    }
+
     const setActiveExpand = () =>
       (value.value = navigationRoutes.routes.map((route: INavigationRoute) => routeHasActiveChild(route)))
 
@@ -100,6 +122,14 @@ export default defineComponent({
     const arrowDirection = (state: boolean) => (state ? 'va-arrow-up' : 'va-arrow-down')
 
     watch(() => route.fullPath, setActiveExpand, { immediate: true })
+
+    watch(
+      route,
+      () => {
+        routers.value = navigationRoutes.routes.filter((route) => isShow(route.name))
+      },
+      { deep: true, immediate: true },
+    )
 
     return {
       writableVisible,
@@ -114,6 +144,7 @@ export default defineComponent({
       iconColor,
       textColor,
       arrowDirection,
+      routers,
     }
   },
 })

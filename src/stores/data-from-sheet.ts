@@ -20,7 +20,7 @@ export async function fetchDataSheet(sheetName: string): Promise<any> {
     // Gửi yêu cầu GET để lấy dữ liệu từ sheet
     const response = await axiosInstance.get(sheetUrl)
     const data = convertData(response.data.values)
-    console.log(`Dữ liệu từ sheet "${sheetName}" đã được lưu vào file`)
+    // console.log(`Dữ liệu từ sheet "${sheetName}" đã được lưu vào file`)
     return data
   } catch (error) {
     console.error(`Lỗi khi lấy dữ liệu từ sheet "${sheetName}":`, error)

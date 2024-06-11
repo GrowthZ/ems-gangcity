@@ -57,12 +57,12 @@ const routes: Array<RouteRecordRaw> = [
             path: 'teacher-list',
             component: () => import('../pages/teachers/Teacher.vue'),
           },
-          {
-            name: 'teacher-salary',
-            path: 'teacher-salary',
-            component: () => import('../pages/salaries/SalaryPage.vue'),
-          },
         ],
+      },
+      {
+        name: 'teacher-salary',
+        path: 'teacher-salary',
+        component: () => import('../pages/salaries/SalaryPage.vue'),
       },
       {
         name: 'attendances',

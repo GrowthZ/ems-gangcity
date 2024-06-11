@@ -133,7 +133,7 @@ const resolveLinkAttribute = (item: ProfileListItem) => {
 }
 
 const handleItemClick = (item: ProfileListItem) => {
-  if (item.name === 'logout') {
+  if (item.name == 'logout') {
     localStorage.clear()
     router.push({ name: 'login' })
   }
