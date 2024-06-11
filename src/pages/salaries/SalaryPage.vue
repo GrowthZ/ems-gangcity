@@ -29,6 +29,7 @@
             value-by="value"
           />
           <VaSelect
+            v-if="isManager"
             v-model="selectedTeacher"
             label="Giáo viên"
             placeholder="Chọn giáo viên"
@@ -81,9 +82,11 @@ import SectionTeacher from './widgets/SectionTeacher.vue'
 const filter = ref('')
 const filterByFields = ref([])
 const filteredCount = ref(0)
+const date = new Date()
+const month = date.getMonth() + 1
 const selectedGroup = ref('')
 const selectedTeacher = ref('')
-const selectedMonth = ref('')
+const selectedMonth = ref(month)
 const pageSize = 10 // Số lượng mục trên mỗi trang
 const currentPage = ref(1) // Trang hiện tại
 
@@ -94,8 +97,12 @@ const loading = computed(() => data.loading)
 
 data.load(DataSheet.attendance, [DataSheet.teacher])
 
+const user = JSON.parse(localStorage.getItem('user') || '{}')
+
+const isManager = user.role === 'manager' || user.role === 'admin'
+const isTeacher = user.role === 'teacher'
+
 const columns = [
-  { key: 'code', sortable: true, label: 'ID' },
   { key: 'date', sortable: true, label: 'Ngày' },
   { key: 'group', sortable: true, label: 'Lớp' },
   { key: 'teacher', sortable: true, label: 'Giáo viên' },
@@ -155,6 +162,10 @@ const filteredItems = computed(() => {
       if (itemMonth !== parseInt(selectedMonth.value, 10)) {
         return false
       }
+    }
+
+    if (isTeacher && item.teacher.toLowerCase() !== user.username.toLowerCase()) {
+      return false
     }
 
     // Lọc dữ liệu dựa trên filter và filterByFields

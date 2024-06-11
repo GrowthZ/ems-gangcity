@@ -60,6 +60,7 @@ export const DataSheet = {
 }
 
 export const Action = {
+  login: 'login',
   markAttendance: 'markAttendance',
   updateAttendance: 'updateAttendance',
   getMarkedStudents: 'getMarkedStudents',

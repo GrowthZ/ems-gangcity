@@ -84,8 +84,8 @@
   },
   "user": {
     "language": "Change language",
-    "logout": "Logout",
-    "profile": "Profile",
+    "logout": "Đăng xuất",
+    "profile": "Thông tin cá nhân",
     "settings": "Settings",
     "billing": "Billing",
     "faq": "FAQ",

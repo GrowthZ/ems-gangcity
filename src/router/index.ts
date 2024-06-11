@@ -1,20 +1,20 @@
 import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router'
 
-import AuthLayout from '../layouts/AuthLayout.vue'
+// import AuthLayout from '../layouts/AuthLayout.vue'
 import AppLayout from '../layouts/AppLayout.vue'
-
+import LoginLayout from '../layouts/LoginLayout.vue'
 import RouteViewComponent from '../layouts/RouterBypass.vue'
 
 const routes: Array<RouteRecordRaw> = [
   {
     path: '/:pathMatch(.*)*',
-    redirect: { name: 'students' },
+    redirect: { name: 'login' },
   },
   {
     name: 'admin',
     path: '/',
     component: AppLayout,
-    redirect: { name: 'students' },
+    redirect: { name: 'login' },
     children: [
       {
         name: 'dashboard',
@@ -105,7 +105,7 @@ const routes: Array<RouteRecordRaw> = [
   },
   {
     path: '/auth',
-    component: AuthLayout,
+    component: LoginLayout,
     children: [
       {
         name: 'login',

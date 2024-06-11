@@ -14,7 +14,7 @@
   </div>
   <VaCard>
     <VaCardContent>
-      <div class="grid md:grid-cols-2 xs:grid-cols-2 gap-4 mb-4">
+      <div v-if="isManager" class="grid md:grid-cols-2 xs:grid-cols-2 gap-4 mb-4">
         <VaDateInput v-model="startDate" :parse="parseDate" :format="formatDate" label="Bắt đầu" />
         <VaDateInput
           v-model="endDate"
@@ -24,7 +24,7 @@
           label="Kết thúc"
         />
       </div>
-      <VaCollapse header="Bộ lọc nâng cao" icon="mso-filter_alt" class="custom-collapse">
+      <VaCollapse v-if="isManager" header="Bộ lọc nâng cao" icon="mso-filter_alt" class="custom-collapse">
         <div class="grid md:grid-cols-4 xs:grid-cols-2 gap-4 mb-6">
           <VaSelect
             v-model="selectedLocation"
@@ -94,6 +94,11 @@ const loading = computed(() => data.loading)
 const students = ref(null)
 const locations = ref(null)
 const teachers = ref(null)
+
+const user = JSON.parse(localStorage.getItem('user') || '{}')
+
+const isManager = user.role === 'manager' || user.role === 'admin'
+const isTeacher = user.role === 'teacher'
 
 data.load(DataSheet.calendar, [DataSheet.student, DataSheet.location, DataSheet.teacher])
 
@@ -176,6 +181,10 @@ const filteredItems = computed(() => {
     }
 
     if (isTeacherSelected && item?.teacher !== selectedTeacher.value) {
+      return false
+    }
+
+    if (isTeacher && item?.teacher.toLowerCase() !== user.username.toLowerCase()) {
       return false
     }
 

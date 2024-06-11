@@ -5,7 +5,9 @@
         <VaButton preset="secondary" color="textPrimary">
           <span class="profile-dropdown__anchor min-w-max">
             <slot />
-            <VaAvatar :size="32" color="warning"> 😍 </VaAvatar>
+            <VaAvatar :size="32" color="warning">
+              <img :src="baseUrl + '/logo.jpg'" alt="avatar" class="rounded-full w-20 h-20" />
+            </VaAvatar>
           </span>
         </VaButton>
       </template>
@@ -22,6 +24,7 @@
             :key="item.name"
             class="menu-item px-4 text-base cursor-pointer h-8"
             v-bind="resolveLinkAttribute(item)"
+            @click="handleItemClick(item)"
           >
             <VaIcon :name="item.icon" class="pr-1" color="secondary" />
             {{ t(`user.${item.name}`) }}
@@ -37,11 +40,13 @@
 import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useColors } from 'vuestic-ui'
+import { useRouter } from 'vue-router'
 
 const { colors, setHSLAColor } = useColors()
 const hoverColor = computed(() => setHSLAColor(colors.focus, { a: 0.1 }))
 
 const { t } = useI18n()
+const router = useRouter()
 
 type ProfileListItem = {
   name: string
@@ -55,6 +60,8 @@ type ProfileOptions = {
   separator: boolean
   list: ProfileListItem[]
 }
+
+const baseUrl = window.location.origin
 
 withDefaults(
   defineProps<{
@@ -71,41 +78,41 @@ withDefaults(
             to: 'preferences',
             icon: 'mso-account_circle',
           },
-          {
-            name: 'settings',
-            to: 'settings',
-            icon: 'mso-settings',
-          },
-          {
-            name: 'billing',
-            to: 'billing',
-            icon: 'mso-receipt_long',
-          },
-          {
-            name: 'projects',
-            to: 'projects',
-            icon: 'mso-favorite',
-          },
+          // {
+          //   name: 'settings',
+          //   to: 'settings',
+          //   icon: 'mso-settings',
+          // },
+          // {
+          //   name: 'billing',
+          //   to: 'billing',
+          //   icon: 'mso-receipt_long',
+          // },
+          // {
+          //   name: 'projects',
+          //   to: 'projects',
+          //   icon: 'mso-favorite',
+          // },
         ],
       },
+      // {
+      //   name: 'explore',
+      //   separator: true,
+      //   list: [
+      //     {
+      //       name: 'faq',
+      //       to: 'faq',
+      //       icon: 'mso-quiz',
+      //     },
+      //     {
+      //       name: 'helpAndSupport',
+      //       href: 'https://discord.gg/u7fQdqQt8c',
+      //       icon: 'mso-error',
+      //     },
+      //   ],
+      // },
       {
-        name: 'explore',
-        separator: true,
-        list: [
-          {
-            name: 'faq',
-            to: 'faq',
-            icon: 'mso-quiz',
-          },
-          {
-            name: 'helpAndSupport',
-            href: 'https://discord.gg/u7fQdqQt8c',
-            icon: 'mso-error',
-          },
-        ],
-      },
-      {
-        name: '',
+        name: 'logout',
         separator: false,
         list: [
           {
@@ -123,6 +130,13 @@ const isShown = ref(false)
 
 const resolveLinkAttribute = (item: ProfileListItem) => {
   return item.to ? { to: { name: item.to } } : item.href ? { href: item.href, target: '_blank' } : {}
+}
+
+const handleItemClick = (item: ProfileListItem) => {
+  if (item.name === 'logout') {
+    localStorage.clear()
+    router.push({ name: 'login' })
+  }
 }
 </script>
 
