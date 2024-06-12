@@ -8,36 +8,37 @@
   <VaCard>
     <VaCardContent>
       <div>
-        <div class="grid md:grid-cols-3 gap-4 mb-6">
-          <!-- <VaInput v-model="filter" placeholder="Tìm kiếm..." class="w-full">
+        <VaCollapse header="Bộ lọc nâng cao" icon="mso-filter_alt" class="custom-collapse">
+          <div class="grid md:grid-cols-3 gap-4 mb-6">
+            <!-- <VaInput v-model="filter" placeholder="Tìm kiếm..." class="w-full">
             <template #prependInner>
               <VaIcon name="search" color="secondary" size="small" />
             </template>
           </VaInput> -->
-          <VaSelect
-            v-model="selectedMonth"
-            label="Tháng"
-            placeholder="Chọn tháng"
-            :options="uniqueMonths"
-            value-by="value"
-          />
-          <VaSelect
-            v-model="selectedGroup"
-            label="Lớp học"
-            placeholder="Chọn lớp"
-            :options="uniqueGroups"
-            value-by="value"
-          />
-          <VaSelect
-            v-if="isManager"
-            v-model="selectedTeacher"
-            label="Giáo viên"
-            placeholder="Chọn giáo viên"
-            :options="uniqueTeachers"
-            value-by="value"
-          />
-        </div>
-
+            <VaSelect
+              v-model="selectedMonth"
+              label="Tháng"
+              placeholder="Chọn tháng"
+              :options="uniqueMonths"
+              value-by="value"
+            />
+            <VaSelect
+              v-model="selectedGroup"
+              label="Lớp học"
+              placeholder="Chọn lớp"
+              :options="uniqueGroups"
+              value-by="value"
+            />
+            <VaSelect
+              v-if="isManager"
+              v-model="selectedTeacher"
+              label="Giáo viên"
+              placeholder="Chọn giáo viên"
+              :options="uniqueTeachers"
+              value-by="value"
+            />
+          </div>
+        </VaCollapse>
         <VaDataTable
           animation="fade-in-up"
           class="va-data-table"

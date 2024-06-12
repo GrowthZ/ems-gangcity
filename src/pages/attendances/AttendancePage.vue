@@ -118,6 +118,7 @@ function formatDate(date) {
 }
 
 function parseDate(dateString) {
+  if (!dateString) return new Date()
   const [day, month, year] = dateString.split('/').map(Number)
   return new Date(year, month - 1, day)
 }

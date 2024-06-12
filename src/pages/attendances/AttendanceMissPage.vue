@@ -47,6 +47,7 @@
       </VaInput>
     </VaCardContent>
   </VaCard>
+
   <VaInnerLoading :loading="loading">
     <VaDataTable
       v-if="!loading"
@@ -104,20 +105,20 @@
         <VaDivider class="my-3" />
       </template>
     </VaDataTable>
-    <VaModal v-slot="{ cancel, ok }" v-model="doShowAttendanceMissingModal" size="small" hide-default-actions>
-      <AttendanceMissingModal
-        :student-missing="studentMissingToEdit"
-        :status-list="statusList"
-        @close="cancel"
-        @save="
-          (data) => {
-            sendUpdateStudentMissing(data)
-            ok()
-          }
-        "
-      />
-    </VaModal>
   </VaInnerLoading>
+  <VaModal v-slot="{ cancel, ok }" v-model="doShowAttendanceMissingModal" size="small" hide-default-actions>
+    <AttendanceMissingModal
+      :student-missing="studentMissingToEdit"
+      :status-list="statusList"
+      @close="cancel"
+      @save="
+        (data) => {
+          sendUpdateStudentMissing(data)
+          ok()
+        }
+      "
+    />
+  </VaModal>
 </template>
 <script setup>
 import { ref, watch, computed } from 'vue'
@@ -157,11 +158,10 @@ data.load(DataSheet.attendanceMissing, [DataSheet.location])
 
 watch(anotherData, (newData) => {
   locations.value = newData[0]
-  console.log(locations.value)
 })
 
 const columns = [
-  { key: 'fullName', sortable: true, label: 'Tên', width: '150px' },
+  { key: 'fullName', label: 'Tên', width: '150px' },
   { key: 'status', label: 'Trạng thái' },
   { key: 'actions', label: 'Hành động' },
 ]
@@ -175,7 +175,6 @@ const filteredItems = computed(() => {
     if (search && !item.fullName.toLowerCase().includes(search) && !item.group.toLowerCase().includes(search)) {
       return false
     }
-
     if (isLocationSelected && !item.studentCode.includes(selectedLocation.value)) {
       return false
     }
@@ -250,7 +249,6 @@ const showAttendanceMissingModal = (student) => {
 
 const sendUpdateStudentMissing = async (dataJson) => {
   data.loading = true
-  console.log(dataJson)
   const res = await sendRequest(Action.updateStudentMissing, dataJson)
 
   if (res.status == 'success') {
