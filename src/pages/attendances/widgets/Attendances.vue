@@ -179,7 +179,7 @@ const sendData = async (data: any) => {
   const res = await sendRequest(Action.markAttendance, data)
   if (res.status == 'success') {
     showMessageBox(`Điểm danh thành công!`, 'success')
-    updateCalendars(data[0][0])
+    updateCalendars(data.code)
   } else {
     showMessageBox(`Điểm danh thất bại!`, 'danger')
   }

@@ -91,9 +91,9 @@ const data = useData()
 const items = computed(() => data.allData)
 const anotherData = computed(() => data.anotherData)
 const loading = computed(() => data.loading)
-const students = ref(null)
-const locations = ref(null)
-const teachers = ref(null)
+const students = ref([])
+const locations = ref([])
+const teachers = ref([])
 
 const user = JSON.parse(localStorage.getItem('user') || '{}')
 
@@ -118,7 +118,7 @@ function formatDate(date) {
 }
 
 function parseDate(dateString) {
-  const [day, month, year] = dateString ? dateString.split('/').map(Number) : [0, 0, 0]
+  const [day, month, year] = dateString.split('/').map(Number)
   return new Date(year, month - 1, day)
 }
 

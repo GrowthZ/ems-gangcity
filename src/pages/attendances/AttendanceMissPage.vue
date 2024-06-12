@@ -4,8 +4,8 @@
       <h1 class="page-title">Danh sách nghỉ</h1>
     </div>
     <div v-if="filteredItems?.length && !loading">
-      <span
-        ><VaIcon :name="`mso-free_cancellation`" class="font-light mb-2 pr-2" color="danger" size="2rem" />
+      <span>
+        <VaIcon :name="`mso-free_cancellation`" class="font-light mb-2 pr-2" color="danger" size="2rem" />
         <span class="text-dark mb-2 text-primary text-lg leading-8 font-bold">
           <!-- {{ filteredDoneCount + ' / ' + filteredItems.length }} -->
           <span class="text-success">{{ countApproveStudent }}</span> / {{ filteredItems.length }}
@@ -24,11 +24,14 @@
           :disable-date="disableEndDate"
           label="Kết thúc"
         />
-        <VaInput v-model="searchValue" class="mb-4" placeholder="Nhập tên, lớp ..." label="Tìm kiếm">
-          <template #appendInner>
-            <VaIcon color="secondary" name="mso-search" />
-          </template>
-        </VaInput>
+
+        <VaSelect
+          v-model="selectedLocation"
+          label="Cơ sở"
+          placeholder="Chọn cơ sở"
+          :options="uniqueLocations"
+          value-by="value"
+        />
         <VaSelect
           v-model="selectedStatus"
           label="Trạng thái"
@@ -37,6 +40,11 @@
           value-by="value"
         />
       </div>
+      <VaInput v-model="searchValue" class="mb-4" placeholder="Nhập tên hoặc lớp ..." label="Tìm kiếm">
+        <template #appendInner>
+          <VaIcon color="secondary" name="mso-search" />
+        </template>
+      </VaInput>
     </VaCardContent>
   </VaCard>
   <VaInnerLoading :loading="loading">
@@ -124,6 +132,7 @@ const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(
 const startDate = ref(todayDate)
 const endDate = ref(todayDate)
 const selectedStatus = ref('')
+const selectedLocation = ref('')
 const searchValue = ref('')
 
 const doShowAttendanceMissingModal = ref(false)
@@ -137,10 +146,19 @@ const statusList = ref([
   { value: 'rejected', text: 'Từ chối', color: 'secondary', colorText: '#000000' },
 ])
 
+const locations = ref([])
+
 const data = useData()
-data.load(DataSheet.attendanceMissing)
 const items = computed(() => data.allData)
+const anotherData = computed(() => data.anotherData)
 const loading = computed(() => data.loading)
+
+data.load(DataSheet.attendanceMissing, [DataSheet.location])
+
+watch(anotherData, (newData) => {
+  locations.value = newData[0]
+  console.log(locations.value)
+})
 
 const columns = [
   { key: 'fullName', sortable: true, label: 'Tên', width: '150px' },
@@ -149,11 +167,16 @@ const columns = [
 ]
 
 const filteredItems = computed(() => {
-  return items.value.filter((item) => {
+  return items?.value.filter((item) => {
     const isStatusSelected = selectedStatus.value !== ''
+    const isLocationSelected = selectedLocation.value !== ''
     const search = searchValue.value.trim().toLowerCase()
 
     if (search && !item.fullName.toLowerCase().includes(search) && !item.group.toLowerCase().includes(search)) {
+      return false
+    }
+
+    if (isLocationSelected && !item.studentCode.includes(selectedLocation.value)) {
       return false
     }
 
@@ -165,7 +188,6 @@ const filteredItems = computed(() => {
     const startDateTime = startDate.value.getTime()
     const endDateTime = endDate.value.getTime()
     const isWithinRange = startDateTime <= itemDateTime && itemDateTime <= endDateTime
-
     return isWithinRange
   })
 })
@@ -202,6 +224,20 @@ const getStatusText = (statusValue) => {
   const statusItem = statusList.value.find((item) => item.value == statusValue)
   return statusItem ? statusItem.text : ''
 }
+
+// const getTextLocation = (code) => {
+//   const location = locations.value.find((location) => location.code === code)
+//   return location ? location.name : ''
+// }
+
+const uniqueLocations = computed(() => {
+  const uniqueLocationsArray = Array.from(locations.value).map((location) => ({
+    value: location.code,
+    text: location.name,
+  }))
+  uniqueLocationsArray.unshift({ value: '', text: 'Tất cả' })
+  return items.value ? uniqueLocationsArray : []
+})
 
 const callStudent = (phone) => {
   window.location.href = `tel:${phone}`
@@ -263,6 +299,7 @@ watch(selectedStatus, () => {
 .va-data-table__table-expanded-content td {
   background-color: var(--va-background-element);
 }
+
 .table-container {
   width: 100%;
 }

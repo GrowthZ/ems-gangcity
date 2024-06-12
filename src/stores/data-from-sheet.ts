@@ -11,6 +11,7 @@ const scriptUrl =
 // Tạo một Axios instance để gửi các yêu cầu HTTP
 const axiosInstance = axios.create()
 const { init: notify } = useToast()
+const delay = (ms: any) => new Promise((resolve) => setTimeout(resolve, ms))
 
 export async function fetchDataSheet(sheetName: string): Promise<any> {
   try {
@@ -68,7 +69,13 @@ export const Action = {
   updateStudentMissing: 'updateStudentMissing',
 }
 
-export const sendRequest = async (action: string, param: string) => {
+interface SendRequestResult {
+  status: string
+  data?: any
+  error?: any
+}
+
+export const sendRequest = async (action: string, param: string): Promise<SendRequestResult> => {
   try {
     const response = await axiosInstance.get(`${scriptUrl}?action=${action}&param=${JSON.stringify(param)}`)
     console.log(`Dữ liệu đã được thêm vào sheet`)
@@ -76,8 +83,14 @@ export const sendRequest = async (action: string, param: string) => {
       status: 'success',
       data: response.data,
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Lỗi khi thêm dữ liệu:', error)
+    if (error && error.response.status === 429) {
+      console.log('Too many requests, retrying...')
+      await delay(1000) // Chờ 1 giây trước khi gửi lại yêu cầu
+      return sendRequest(action, param)
+    }
+
     return {
       status: 'error',
       error: error,

@@ -167,6 +167,21 @@ const studentMarks = computed(() => {
   ])
 })
 
+const studentUnmarks = computed(() => {
+  const selectedCodes = selection.value
+  return studentsOfGroup.value
+    .filter((student) => !selectedCodes.includes(student.code))
+    .map((student) => [
+      calendar.value.attendanceCode,
+      student.code,
+      student.fullname,
+      calendar.value.dateTime,
+      calendar.value.group,
+      student.phone,
+      'Chưa chăm sóc',
+    ])
+})
+
 const isValidate = computed(() => {
   return selection.value.length > 0
 })
@@ -200,7 +215,12 @@ const clearStudentAdd = () => {
 
 const emit = defineEmits(['close', 'save'])
 const onSave = () => {
-  emit('save', studentMarks.value)
+  const dataAttendance = {
+    code: calendar.value.attendanceCode,
+    studentMarks: studentMarks.value,
+    studentMissings: studentUnmarks.value,
+  }
+  emit('save', dataAttendance)
 }
 
 const getMarkedStudents = async (attendanceCode) => {
