@@ -1,6 +1,6 @@
 <template>
   <VaForm ref="add-calendar-form" class="flex-col justify-center items-center gap-4 inline-flex w-full">
-    <div class="self-stretch flex-col justify-center items-center gap-4 flex">
+    <div v-if="!isReview" class="self-stretch flex-col justify-center items-center gap-4 flex">
       <div class="grid md:grid-cols-2 xs:grid-cols-2 gap-4">
         <VaSelect
           v-model="selectedGroup"
@@ -95,6 +95,28 @@
       </div>
       <div class="flex gap-2 flex-col-reverse items-stretch justify-end w-full sm:flex-row sm:items-center">
         <VaButton preset="secondary" color="secondary" @click="$emit('close')">Huỷ</VaButton>
+        <VaButton :disabled="isValid" @click="onSave">Xác nhận</VaButton>
+      </div>
+    </div>
+    <div v-if="isReview">
+      <div class="flex justify-between items-center mb-2 mt-4">
+        <div color="info">
+          Tổng số:
+          <strong class="text-primary">{{ getDaysInRange(startDate, endDate).length }}</strong>
+        </div>
+        <div>
+          Từ <strong>{{ startDate.toLocaleDateString('vi-VN') }}</strong> đến
+          <strong>{{ endDate.toLocaleDateString('vi-VN') }}</strong>
+        </div>
+      </div>
+      <VaDataTable
+        :items="getDaysInRange(startDate, endDate)"
+        :columns="columns"
+        animation="fade-in-up"
+        class="va-data-table"
+      />
+      <div class="flex gap-2 flex-col-reverse items-stretch justify-end w-full sm:flex-row sm:items-center">
+        <VaButton preset="secondary" color="secondary" @click="isReview = !isReview">Huỷ</VaButton>
         <VaButton :disabled="isValid" @click="onSave">{{ saveButtonLabel }}</VaButton>
       </div>
     </div>
@@ -115,7 +137,9 @@ const props = defineProps({
 })
 
 const teacherOptions = computed(() => {
-  return props.teachers.map((teacher) => ({ value: teacher.nickname, text: teacher.nickname }))
+  const teachers = props.teachers.map((teacher) => ({ value: teacher.nickname, text: teacher.nickname }))
+  teachers.unshift({ value: '', text: '' })
+  return teachers
 })
 
 const centerOptions = computed(() => {
@@ -141,6 +165,7 @@ const today = new Date()
 const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate())
 const startDate = ref(todayDate)
 const endDate = ref(todayDate)
+const isReview = ref(false)
 
 const selection = ref([])
 const selectedDays = ref([])
@@ -155,9 +180,14 @@ const days = [
   { label: 'CN', value: 'CN', text: 'Chủ nhật' },
 ]
 
-// const selectedDays = computed(() => {
-//   return days.filter((day) => selection.value.includes(day.value))
-// })
+const columns = [
+  { key: 'location', label: 'Trung tâm' },
+  { key: 'dateTime', label: 'Ngày tháng' },
+  { key: 'attendanceTime', label: 'Thời gian' },
+  { key: 'group', label: 'Lớp học' },
+  { key: 'teacher', label: 'Giáo viên' },
+  { key: 'subTeacher', label: 'Trợ giảng' },
+]
 
 const toggleSelection = (day) => {
   if (selectedDays.value.includes(day)) {
@@ -194,7 +224,6 @@ const getDaysInRange = (startDate, endDate) => {
   const days = []
   const start = new Date(startDate)
   const end = new Date(endDate)
-
   // Convert selectedDays to an array of day indices
   const dayOfSelection = selection.value.map((day) => getDayOfWeek(day))
 
@@ -215,10 +244,10 @@ const getDaysInRange = (startDate, endDate) => {
       const formattedDate = start.toLocaleDateString('vi-VN')
       days.push({
         dateTime: formattedDate,
-        location: selectedLocation.value.text,
+        location: getTextLocation(selectedLocation.value),
         group: selectedGroup.value,
-        teacher: selectedTeacher.value.text,
-        subTeacher: selectedSubTeacher.value.text,
+        teacher: selectedTeacher.value,
+        subTeacher: selectedSubTeacher.value,
         startTime: startTime,
         endTime: endTime,
         attendanceTime: startTime + ' - ' + endTime,
@@ -234,7 +263,6 @@ const getDaysInRange = (startDate, endDate) => {
     }
     start.setDate(start.getDate() + 1)
   }
-  console.log(days)
   return days
 }
 
@@ -242,7 +270,6 @@ const getDayObject = (day) => {
   return dayObjects.value.find((dayObject) => dayObject.day == day)
 }
 
-// Utility function to convert day name to day index
 const getDayOfWeek = (day) => {
   const daysOfWeek = {
     CN: 0,
@@ -265,24 +292,14 @@ const isValid = computed(() => {
   return selection.value.length < 1 || dayObjects.value.length < 1 || selectedGroup.value == ''
 })
 
-// const defaultNewCalendar = {
-//   dateTime: selectedDateConvert.value,
-//   turnTime: selectedTime.value.text,
-//   location: selectedLocation.value.text,
-//   group: selectedGroup.value.text,
-//   teacher: selectedTeacher.value.text,
-//   attendanceCode: '',
-//   active: true,
-//   notes: '',
-// }
-
 // const newCalendar = ref(defaultNewCalendar)
 
 // const emit = defineEmits(['close', 'save'])
 // const { confirm } = useModal()
 
 const onSave = () => {
-  getDaysInRange(startDate.value, endDate.value)
+  isReview.value = true
+  // getDaysInRange(startDate.value, endDate.value)
   // if (validate()) {
   //   emit('save', newCalendar.value)
   // } else {
@@ -330,21 +347,19 @@ watch([startDate, endDate], () => {
   }
 })
 
-// watch([selectedDateConvert, selectedTime, selectedLocation, selectedGroup, selectedTeacher], () => {
-//   defaultNewCalendar.dateTime = selectedDateConvert.value
-//   defaultNewCalendar.turnTime = selectedTime.value
-//   defaultNewCalendar.location = selectedLocation.value
-//   defaultNewCalendar.group = selectedGroup.value
-//   defaultNewCalendar.teacher = selectedTeacher.value
-//   // Cập nhật các trường dữ liệu khác nếu cần
-//   newCalendar.value = { ...defaultNewCalendar }
-// })
 const selectGroupData = (group) => {
   const groupTKB = props.tkb.filter((tkb) => tkb.group == group)
   if (groupTKB.length > 0) {
-    selectedLocation.value = { value: groupTKB[0].location, text: getTextLocation(groupTKB[0].location) }
-    selectedTeacher.value = { value: groupTKB[0].teacher, text: groupTKB[0].teacher }
-    selectedSubTeacher.value = { value: groupTKB[0].subTeacher, text: groupTKB[0].subTeacher }
+    // selectedLocation = { value: groupTKB[0].location, text: getTextLocation(groupTKB[0].location) }
+    selectedLocation.value = groupTKB[0].location
+    // selectedLocation.text = getTextLocation(groupTKB[0].location)
+    selectedTeacher.value = groupTKB[0].teacher
+    // selectedTeacher.text = groupTKB[0].teacher
+    selectedSubTeacher.value = groupTKB[0].subTeacher
+    // selectedSubTeacher.text = groupTKB[0].subTeacher
+    // selectedTeacher = { value: groupTKB[0].teacher, text: groupTKB[0].teacher }
+    // selectedSubTeacher = { value: groupTKB[0].subTeacher, text: groupTKB[0].subTeacher }
+
     dayObjects.value = groupTKB.map((tkb) => {
       return {
         day: tkb.dayOfWeek,
@@ -364,6 +379,14 @@ const selectGroupData = (group) => {
 watch([selectedGroup], () => {
   selectGroupData(selectedGroup.value)
 })
+
+// watch([selectedLocation, selectedTeacher, selectedSubTeacher], () => {
+//   defaultNewCalendar.location = selectedLocation.value.text
+//   defaultNewCalendar.teacher = selectedTeacher.value.text
+//   defaultNewCalendar.subTeacher = selectedSubTeacher.value.text
+//   // Cập nhật các trường dữ liệu khác nếu cần
+//   console.log(defaultNewCalendar)
+// })
 
 // Thực hiện lệnh khi component được mount
 onMounted(() => {
