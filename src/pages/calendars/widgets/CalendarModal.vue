@@ -1,36 +1,7 @@
 <template>
-  <VaForm ref="add-calendar-form" class="flex-col justify-start items-start gap-4 inline-flex w-full">
-    <div class="self-stretch flex-col justify-start items-start gap-4 flex">
-      <div class="flex gap-4 flex-col sm:flex-row w-full">
-        <VaSelect
-          v-model="selectedLocation"
-          :rules="[(v) => typeof v !== 'undefined' || 'Fulfill the condition']"
-          label="Trung tâm"
-          class="w-full sm:w-1/2"
-          placeholder="Chọn trung tâm"
-          :options="centerOptions"
-          value-by="value"
-        />
-      </div>
-      <div class="flex gap-4 flex-col sm:flex-row w-full">
-        <VaDateInput
-          v-model="selectedDate"
-          label="Ngày tháng"
-          class="w-full sm:w-1/2"
-          :rules="[validators.required]"
-          name="dateTime"
-        />
-        <VaSelect
-          v-model="selectedTime"
-          label="Thời gian"
-          placeholder="Chọn thời gian"
-          :options="timeOptions"
-          value-by="value"
-          :rules="[(v) => !!v || 'Payment System field is required']"
-          :default="timeOptions[0]"
-        />
-      </div>
-      <div class="flex gap-4 flex-col sm:flex-row w-full">
+  <VaForm ref="add-calendar-form" class="flex-col justify-center items-center gap-4 inline-flex w-full">
+    <div class="self-stretch flex-col justify-center items-center gap-4 flex">
+      <div class="grid md:grid-cols-2 xs:grid-cols-2 gap-4">
         <VaSelect
           v-model="selectedGroup"
           label="Lớp học"
@@ -41,12 +12,86 @@
           name="group"
         />
         <VaSelect
+          v-model="selectedLocation"
+          :rules="[(v) => typeof v !== 'undefined' || 'Fulfill the condition']"
+          label="Trung tâm"
+          placeholder="Chọn trung tâm"
+          :options="centerOptions"
+          value-by="value"
+          :disabled="selectedGroup == ''"
+        />
+        <VaSelect
           v-model="selectedTeacher"
           label="Giáo viên"
           placeholder="Chọn giáo viên"
           :options="teacherOptions"
           value-by="value"
+          :disabled="selectedGroup == ''"
         />
+        <VaSelect
+          v-model="selectedSubTeacher"
+          label="Trợ giảng"
+          placeholder="Chọn trợ giảng"
+          :options="teacherOptions"
+          value-by="value"
+          :disabled="selectedGroup == ''"
+        />
+        <VaDateInput v-model="startDate" :parse="parseDate" :format="formatDate" label="Ngày bắt đầu" />
+        <VaDateInput v-model="endDate" :parse="parseDate" :format="formatDate" label="Ngày kết thúc" />
+      </div>
+      <div class="flex gap-4 flex-col sm:flex-row w-full"></div>
+      <div class="checkbox-container">
+        <div class="checkbox-group grid grid-col-4 mx-auto">
+          <div class="flex justify-center items-center">
+            <VaCheckbox
+              v-for="(day, index) in days"
+              :key="index"
+              v-model="selection"
+              :array-value="day.value"
+              :label="day.label"
+              checked-icon="none"
+              unchecked-icon="none"
+              color="success"
+              class="circle-checkbox checkbox-item"
+              :class="{
+                'selected-checkbox': selection.includes(day.value),
+                'default-checkbox': !selection.includes(day.value),
+              }"
+              @click="toggleSelection(day.value)"
+            />
+          </div>
+        </div>
+        <div class="mb-2 mt-4">
+          <div v-if="selectedDays.length === 0">Chưa có lịch nào được chọn.</div>
+          <div v-else>
+            <p class="mb-2">Lịch học được chọn:</p>
+            <ul>
+              <li v-for="(dayObj, index) in dayObjects" :key="index" class="mb-2">
+                <div class="grid md:grid-cols-2 items-center gap-2">
+                  <div class="text-success font-bold">{{ getTextDay(dayObj.day) }}</div>
+                  <div>
+                    <VaTimeInput
+                      v-model="dayObj.startTime"
+                      :hours-filter="(h) => h >= 6 && h <= 22"
+                      :minutes-filter="(m) => m % 15 === 0"
+                      label="Giờ bắt đầu"
+                      class="w-28"
+                    />
+                    -
+                    <VaTimeInput
+                      v-model="dayObj.endTime"
+                      :hours-filter="(h) => h >= 6 && h <= 22"
+                      :minutes-filter="(m) => m % 15 === 0"
+                      label="Giờ kết thúc"
+                      class="w-28"
+                    />
+                  </div>
+                </div>
+                <VaDivider class="my-2" />
+              </li>
+            </ul>
+          </div>
+        </div>
       </div>
       <div class="flex gap-2 flex-col-reverse items-stretch justify-end w-full sm:flex-row sm:items-center">
         <VaButton preset="secondary" color="secondary" @click="$emit('close')">Huỷ</VaButton>
@@ -58,89 +103,215 @@
 
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
-import { useForm, useModal } from 'vuestic-ui'
-import { validators } from '../../../services/utils'
+import { VaTimeInput } from 'vuestic-ui'
 
 const props = defineProps({
   calendarToEdit: { type: Object, default: () => ({}) },
   teachers: { type: Array, default: () => [] },
   centers: { type: Array, default: () => [] },
   groups: { type: Array, default: () => [] },
+  tkb: { type: Array, default: () => [] },
   saveButtonLabel: { type: String, default: '' },
 })
 
-const Time = {
-  c1: '8h - 9h30',
-  c2: '9h30 - 11h',
-  c3: '15h - 16h30',
-  c4: '17h30 - 19h',
-  c5: '20h - 21h30',
-  c6: '16h30 - 17h30',
-  c7: '17h - 18h30',
-  c8: '19h30 - 20h30',
-}
-const timeOptions = computed(() => {
-  return Object.entries(Time).map(([value]) => ({ value: value, text: value }))
-})
 const teacherOptions = computed(() => {
   return props.teachers.map((teacher) => ({ value: teacher.nickname, text: teacher.nickname }))
 })
 
 const centerOptions = computed(() => {
-  return props.centers.map((center) => ({ value: center.name, text: center.name }))
+  return props.centers.map((center) => ({ value: center.code, text: center.name }))
 })
 
 const groupOptions = computed(() => {
   return props.groups.map((group) => ({ value: group.name, text: group.name }))
 })
 
-const selectedTime = ref('')
+const getTextLocation = (location) => {
+  return props.centers.find((center) => center.code == location).name
+}
+
 const selectedTeacher = ref('')
+const selectedSubTeacher = ref('')
 const selectedLocation = ref('')
 const selectedGroup = ref('')
 const selectedDate = ref(new Date().toISOString().substr(0, 10))
 const selectedDateConvert = ref('')
 
+const today = new Date()
+const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+const startDate = ref(todayDate)
+const endDate = ref(todayDate)
+
+const selection = ref([])
+const selectedDays = ref([])
+const dayObjects = ref([])
+const days = [
+  { label: 'T2', value: 'T2', text: 'Thứ 2' },
+  { label: 'T3', value: 'T3', text: 'Thứ 3' },
+  { label: 'T4', value: 'T4', text: 'Thứ 4' },
+  { label: 'T5', value: 'T5', text: 'Thứ 5' },
+  { label: 'T6', value: 'T6', text: 'Thứ 6' },
+  { label: 'T7', value: 'T7', text: 'Thứ 7' },
+  { label: 'CN', value: 'CN', text: 'Chủ nhật' },
+]
+
+// const selectedDays = computed(() => {
+//   return days.filter((day) => selection.value.includes(day.value))
+// })
+
+const toggleSelection = (day) => {
+  if (selectedDays.value.includes(day)) {
+    selectedDays.value = selectedDays.value.filter((selectedDay) => selectedDay !== day)
+    dayObjects.value = dayObjects.value.filter((dayObject) => dayObject.day !== day)
+  } else {
+    selectedDays.value.push(day)
+    const dayObject = {
+      day: day,
+      startTime: getDate('08:00'),
+      endTime: getDate('9:30'),
+    }
+    dayObjects.value.push(dayObject)
+  }
+  dayObjects.value.sort((a, b) => {
+    const dayOrder = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN']
+    return dayOrder.indexOf(a.day) - dayOrder.indexOf(b.day)
+  })
+}
+
+const getDate = (time) => {
+  const arrTime = time.split(':')
+  const timeObject = new Date()
+  timeObject.setHours(arrTime[0])
+  timeObject.setMinutes(arrTime[1])
+  return timeObject
+}
+
+const getTextDay = (day) => {
+  return days.find((d) => d.value == day).text
+}
+
+const getDaysInRange = (startDate, endDate) => {
+  const days = []
+  const start = new Date(startDate)
+  const end = new Date(endDate)
+
+  // Convert selectedDays to an array of day indices
+  const dayOfSelection = selection.value.map((day) => getDayOfWeek(day))
+
+  while (start <= end) {
+    const currentDay = start.getDay()
+    const dayText = reverseDayOfWeek(currentDay)
+
+    if (dayOfSelection.includes(currentDay)) {
+      const dayObject = getDayObject(dayText)
+      const startTime =
+        String(dayObject.startTime?.getHours()).padStart(2, '0') +
+        ':' +
+        String(dayObject.startTime?.getMinutes()).padStart(2, '0')
+      const endTime =
+        String(dayObject.endTime?.getHours()).padStart(2, '0') +
+        ':' +
+        String(dayObject.endTime?.getMinutes()).padStart(2, '0')
+      const formattedDate = start.toLocaleDateString('vi-VN')
+      days.push({
+        dateTime: formattedDate,
+        location: selectedLocation.value.text,
+        group: selectedGroup.value,
+        teacher: selectedTeacher.value.text,
+        subTeacher: selectedSubTeacher.value.text,
+        startTime: startTime,
+        endTime: endTime,
+        attendanceTime: startTime + ' - ' + endTime,
+        attendanceCode:
+          'GC' +
+          selectedGroup.value +
+          formattedDate.split('/').join('') +
+          startTime.split(':').join('') +
+          endTime.split(':').join(''),
+        note: '',
+        status: 0,
+      })
+    }
+    start.setDate(start.getDate() + 1)
+  }
+  console.log(days)
+  return days
+}
+
+const getDayObject = (day) => {
+  return dayObjects.value.find((dayObject) => dayObject.day == day)
+}
+
+// Utility function to convert day name to day index
+const getDayOfWeek = (day) => {
+  const daysOfWeek = {
+    CN: 0,
+    T2: 1,
+    T3: 2,
+    T4: 3,
+    T5: 4,
+    T6: 5,
+    T7: 6,
+  }
+  return daysOfWeek[day]
+}
+
+const reverseDayOfWeek = (day) => {
+  const daysOfWeek = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7']
+  return daysOfWeek[day]
+}
+
 const isValid = computed(() => {
-  return (
-    selectedTime.value == '' || selectedTeacher.value == '' || selectedLocation.value == '' || selectedGroup.value == ''
-  )
+  return selection.value.length < 1 || dayObjects.value.length < 1 || selectedGroup.value == ''
 })
 
-const defaultNewCalendar = {
-  dateTime: selectedDateConvert.value,
-  turnTime: selectedTime.value.text,
-  location: selectedLocation.value.text,
-  group: selectedGroup.value.text,
-  teacher: selectedTeacher.value.text,
-  attendanceCode: '',
-  active: true,
-  notes: '',
-}
-const newCalendar = ref(defaultNewCalendar)
+// const defaultNewCalendar = {
+//   dateTime: selectedDateConvert.value,
+//   turnTime: selectedTime.value.text,
+//   location: selectedLocation.value.text,
+//   group: selectedGroup.value.text,
+//   teacher: selectedTeacher.value.text,
+//   attendanceCode: '',
+//   active: true,
+//   notes: '',
+// }
 
-const { validate } = useForm('add-calendar-form')
-const emit = defineEmits(['close', 'save'])
-const { confirm } = useModal()
+// const newCalendar = ref(defaultNewCalendar)
+
+// const emit = defineEmits(['close', 'save'])
+// const { confirm } = useModal()
 
 const onSave = () => {
-  console.log(isValid)
-  if (validate()) {
-    emit('save', newCalendar.value)
-  } else {
-    const agreed = confirm({
-      title: 'Vui lòng điền đầy đủ thông tin',
-      message: `Bạn hãy điền đầy đủ thông tin lịch học`,
-      okText: 'Thử lại',
-      cancelText: 'Đã hiểu',
-      size: 'small',
-      maxWidth: '380px',
-    })
+  getDaysInRange(startDate.value, endDate.value)
+  // if (validate()) {
+  //   emit('save', newCalendar.value)
+  // } else {
+  //   const agreed = confirm({
+  //     title: 'Vui lòng điền đầy đủ thông tin',
+  //     message: `Bạn hãy điền đầy đủ thông tin lịch học`,
+  //     okText: 'Thử lại',
+  //     cancelText: 'Đã hiểu',
+  //     size: 'small',
+  //     maxWidth: '380px',
+  //   })
 
-    if (agreed) {
-      console.log('Thử lại')
-    }
-  }
+  //   if (agreed) {
+  //     console.log('Thử lại')
+  //   }
+  // }
+}
+
+function formatDate(date) {
+  const day = String(date.getDate()).padStart(2, '0')
+  const month = String(date.getMonth() + 1).padStart(2, '0') // Tháng bắt đầu từ 0
+  const year = date.getFullYear()
+  return `${day}/${month}/${year}`
+}
+
+function parseDate(dateString) {
+  if (!dateString) return new Date()
+  const [day, month, year] = dateString.split('/').map(Number)
+  return new Date(year, month - 1, day)
 }
 
 const convertSelectedDate = (newValue) => {
@@ -153,14 +324,45 @@ watch(selectedDate, (newValue) => {
   convertSelectedDate(newValue)
 })
 
-watch([selectedDateConvert, selectedTime, selectedLocation, selectedGroup, selectedTeacher], () => {
-  defaultNewCalendar.dateTime = selectedDateConvert.value
-  defaultNewCalendar.turnTime = selectedTime.value
-  defaultNewCalendar.location = selectedLocation.value
-  defaultNewCalendar.group = selectedGroup.value
-  defaultNewCalendar.teacher = selectedTeacher.value
-  // Cập nhật các trường dữ liệu khác nếu cần
-  newCalendar.value = { ...defaultNewCalendar }
+watch([startDate, endDate], () => {
+  if (startDate.value > endDate.value) {
+    endDate.value = startDate.value
+  }
+})
+
+// watch([selectedDateConvert, selectedTime, selectedLocation, selectedGroup, selectedTeacher], () => {
+//   defaultNewCalendar.dateTime = selectedDateConvert.value
+//   defaultNewCalendar.turnTime = selectedTime.value
+//   defaultNewCalendar.location = selectedLocation.value
+//   defaultNewCalendar.group = selectedGroup.value
+//   defaultNewCalendar.teacher = selectedTeacher.value
+//   // Cập nhật các trường dữ liệu khác nếu cần
+//   newCalendar.value = { ...defaultNewCalendar }
+// })
+const selectGroupData = (group) => {
+  const groupTKB = props.tkb.filter((tkb) => tkb.group == group)
+  if (groupTKB.length > 0) {
+    selectedLocation.value = { value: groupTKB[0].location, text: getTextLocation(groupTKB[0].location) }
+    selectedTeacher.value = { value: groupTKB[0].teacher, text: groupTKB[0].teacher }
+    selectedSubTeacher.value = { value: groupTKB[0].subTeacher, text: groupTKB[0].subTeacher }
+    dayObjects.value = groupTKB.map((tkb) => {
+      return {
+        day: tkb.dayOfWeek,
+        startTime: getDate(tkb.startTime),
+        endTime: getDate(tkb.endTime),
+      }
+    })
+    dayObjects.value.sort((a, b) => {
+      const dayOrder = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN']
+      return dayOrder.indexOf(a.day) - dayOrder.indexOf(b.day)
+    })
+    selection.value = groupTKB.map((tkb) => tkb.dayOfWeek)
+    selectedDays.value = groupTKB.map((tkb) => tkb.dayOfWeek)
+  }
+}
+
+watch([selectedGroup], () => {
+  selectGroupData(selectedGroup.value)
 })
 
 // Thực hiện lệnh khi component được mount
@@ -168,3 +370,59 @@ onMounted(() => {
   convertSelectedDate(selectedDate.value)
 })
 </script>
+<style lang="scss" scoped>
+.checkbox-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.checkbox-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.checkbox-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid #ccc;
+  border-radius: 50%;
+  transition:
+    color 0.3s,
+    background-color 0.3s;
+  margin-left: 10px;
+}
+
+.checkbox-item.selected-checkbox {
+  color: white;
+  background-color: var(--va-success);
+}
+
+.checkbox-item.default-checkbox {
+  color: black;
+  background-color: #ffffff;
+}
+
+.checkbox-item .va-checkbox__label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.circle-checkbox {
+  --va-checkbox-square-border-radius: 50%;
+  --va-checkbox-font-size: 18px;
+
+  --va-checkbox-square-min-width: 0rem;
+  --va-checkbox-square-min-height: 0rem;
+  --va-checkbox-square-width: 0;
+  --va-checkbox-square-height: 0;
+  --va-checkbox-square-border: none;
+}
+</style>

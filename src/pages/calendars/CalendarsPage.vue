@@ -74,20 +74,7 @@
       :teachers="teachers"
       :centers="centers"
       :groups="groups"
-      @close="cancel"
-      @save="
-        (calendar) => {
-          onCalendarSave(calendar)
-        }
-      "
-    />
-
-    <AttendanceModal
-      v-model="doShowAttendanceModal"
-      :calendar="calendarToEdit"
-      :teachers="teachers"
-      :centers="centers"
-      :groups="groups"
+      :tkb="tkb"
       @close="cancel"
       @save="
         (calendar) => {
@@ -104,7 +91,6 @@ import { useData } from '../../stores/use-data'
 import { DataSheet } from '../../stores/data-from-sheet'
 import { VaCard, VaCardContent, VaChip, VaDataTable, VaIcon, VaInput, VaButton, useToast } from 'vuestic-ui'
 import CalendarModal from './widgets/CalendarModal.vue'
-import AttendanceModal from './widgets/AttendanceModal.vue'
 
 const data = useData()
 const calendars = computed(() => data.filteredData)
@@ -118,10 +104,11 @@ const isPaginationVisible = computed(() => data.isPaginationVisible)
 const filter = ref('')
 const colors = ['primary', 'secondary', 'success', 'info', 'warning', 'danger']
 
-data.load(DataSheet.calendar, [DataSheet.teacher, DataSheet.location, DataSheet.group])
+data.load(DataSheet.calendar, [DataSheet.teacher, DataSheet.location, DataSheet.group, DataSheet.tkb])
 const teachers = ref(null)
 const centers = ref(null)
 const groups = ref(null)
+const tkb = ref(null)
 
 console.log(calendars)
 watch(anotherData, (newData) => {
@@ -129,6 +116,7 @@ watch(anotherData, (newData) => {
     teachers.value = newData[0]
     centers.value = newData[1]
     groups.value = newData[2]
+    tkb.value = newData[3]
   }
 })
 
@@ -136,7 +124,7 @@ const doShowModal = ref(false)
 const doShowAttendanceModal = ref(false)
 const calendarToEdit = ref(null)
 
-// const showEditCalendarModal = (calendar) => {
+// const showEdit  = (calendar) => {
 //   calendarToEdit.value = calendar
 //   doShowModal.value = true
 // }
@@ -173,9 +161,10 @@ const onCalendarSave = (calendar) => {
 const columns = [
   { key: 'location', label: 'Trung tâm' },
   { key: 'dateTime', label: 'Ngày tháng' },
-  { key: 'turnTime', label: 'Thời gian' },
+  { key: 'attendanceTime', label: 'Thời gian' },
   { key: 'group', label: 'Lớp học' },
   { key: 'teacher', label: 'Giáo viên' },
+  { key: 'subTeacher', label: 'Trợ giảng' },
   { key: 'attendanceCode', label: 'Trạng thái' },
 ]
 

@@ -39,36 +39,39 @@
             />
           </div>
         </VaCollapse>
-        <VaDataTable
-          animation="fade-in-up"
-          class="va-data-table"
-          :items="paginateItems"
-          :columns="columns"
-          :filter="filter"
-          :loading="loading"
-          :filter-method="customFilteringFn"
-          no-data-html="Không có dữ liệu"
-          @filtered="updateFilteredCount"
-        />
+        <VaInnerLoading :loading="loading">
+          <VaDataTable
+            v-if="!loading"
+            animation="fade-in-up"
+            class="va-data-table"
+            :items="paginateItems"
+            :columns="columns"
+            :filter="filter"
+            :loading="loading"
+            :filter-method="customFilteringFn"
+            no-data-html="Không có dữ liệu"
+            @filtered="updateFilteredCount"
+          />
 
-        <div class="flex justify-between items-center mb-6">
-          <div color="info" class="pt-3">
-            Tổng số:
-            <strong>{{ filteredItems.length }}</strong>
+          <div v-if="!loading" class="flex justify-between items-center mb-6">
+            <div color="info" class="pt-3">
+              Tổng số:
+              <strong>{{ filteredItems.length }}</strong>
+            </div>
+            <div>
+              <VaPagination
+                v-if="isPaginationVisible"
+                v-model="currentPage"
+                :pages="totalPages"
+                :visible-pages="3"
+                buttons-preset="secondary"
+                active-page-color="primary"
+                gapped
+                class="pagination"
+              />
+            </div>
           </div>
-          <div>
-            <VaPagination
-              v-if="isPaginationVisible"
-              v-model="currentPage"
-              :pages="totalPages"
-              :visible-pages="3"
-              buttons-preset="secondary"
-              active-page-color="primary"
-              gapped
-              class="pagination"
-            />
-          </div>
-        </div>
+        </VaInnerLoading>
       </div>
     </VaCardContent>
   </VaCard>
@@ -235,7 +238,7 @@ const isPaginationVisible = computed(() => {
 
 // fetchStudents()
 
-watch(selectedGroup, () => {
+watch([selectedGroup, selectedTeacher, selectedMonth], () => {
   data.loading = true
   sleep(100).then(() => {
     data.loading = false

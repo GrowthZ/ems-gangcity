@@ -87,7 +87,7 @@ const filter = ref('')
 const filterByFields = ref([])
 const filteredCount = ref(0)
 const selectedGroup = ref('')
-const pageSize = 10 // Số lượng mục trên mỗi trang
+const pageSize = 15 // Số lượng mục trên mỗi trang
 const currentPage = ref(1) // Trang hiện tại
 const doShowModal = ref(false)
 const studentToEdit = (ref < import('./types').Student) | (null > null)
@@ -100,7 +100,6 @@ const isLoading = computed(() => store.loading)
 store.load()
 
 const columns = [
-  { key: 'id', sortable: true, label: 'ID' },
   { key: 'fullname', sortable: true, label: 'Tên' },
   { key: 'group', sortable: true, label: 'Lớp' },
   { key: 'phone', sortable: true, label: 'SĐT' },

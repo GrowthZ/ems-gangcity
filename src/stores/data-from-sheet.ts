@@ -2,8 +2,8 @@ import axios from 'axios'
 import { useToast } from 'vuestic-ui'
 
 // Khai báo các thông tin cần thiết
-const sheetId = '1rNBjkAxE0-F4V_YYj6fOJ6aRnHucugKNBGnA63c0o6U'
-const apiKey = 'AIzaSyCIwuR3WozVRKnXk9sHn7qmqqc50eN7g-A'
+const sheetId = '1HhIpXU6Egq9MZmyCAvPnEjCT8V4n9soD7EY4LQ8Nt0w'
+const apiKey = 'AIzaSyC9NlfiP4qs-Hfaej4RpmxxWXRcAoKM7ao'
 const baseUrl = 'https://sheets.googleapis.com/v4/spreadsheets'
 const scriptUrl =
   'https://script.google.com/macros/s/AKfycby0_EvfFeMRcRkelOS6qP_tEoD7wWYxyxDmYNv4Vv_vmXnebYYGXWipSerivXuPdYY/exec'
@@ -58,6 +58,7 @@ export const DataSheet = {
   location: 'CoSo',
   attendance: 'DiemDanh',
   attendanceMissing: 'DiemDanhNghi',
+  tkb: 'TKB',
 }
 
 export const Action = {

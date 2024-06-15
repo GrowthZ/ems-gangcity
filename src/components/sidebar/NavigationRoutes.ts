@@ -60,13 +60,13 @@ export default {
       },
     },
 
-    // {
-    //   name: 'users',
-    //   displayName: 'menu.users',
-    //   meta: {
-    //     icon: 'group',
-    //   },
-    // },
+    {
+      name: 'calendars',
+      displayName: 'menu.calendars',
+      meta: {
+        icon: 'calendar_month',
+      },
+    },
     // {
     //   name: 'projects',
     //   displayName: 'menu.projects',
