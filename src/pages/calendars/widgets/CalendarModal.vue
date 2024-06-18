@@ -39,7 +39,6 @@
         <VaDateInput v-model="startDate" :parse="parseDate" :format="formatDate" label="Ngày bắt đầu" />
         <VaDateInput v-model="endDate" :parse="parseDate" :format="formatDate" label="Ngày kết thúc" />
       </div>
-      <div class="flex gap-4 flex-col sm:flex-row w-full"></div>
       <div class="checkbox-container">
         <div class="checkbox-group grid grid-col-4 mx-auto">
           <div class="flex justify-center items-center">
@@ -98,42 +97,61 @@
         <VaButton :disabled="isValid" @click="onSave">Xác nhận</VaButton>
       </div>
     </div>
-    <div v-if="isReview">
-      <div class="flex justify-between items-center mb-2 mt-4">
-        <div color="info">
-          Tổng số:
-          <strong class="text-primary">{{ getDaysInRange(startDate, endDate).length }}</strong>
-        </div>
-        <div>
-          Từ <strong>{{ startDate.toLocaleDateString('vi-VN') }}</strong> đến
-          <strong>{{ endDate.toLocaleDateString('vi-VN') }}</strong>
-        </div>
-      </div>
-      <VaDataTable
-        :items="getDaysInRange(startDate, endDate)"
-        :columns="columns"
-        animation="fade-in-up"
-        class="va-data-table"
-      />
-      <div class="flex gap-2 flex-col-reverse items-stretch justify-end w-full sm:flex-row sm:items-center">
-        <VaButton preset="secondary" color="secondary" @click="isReview = !isReview">Huỷ</VaButton>
-        <VaButton :disabled="isValid" @click="onSave">{{ saveButtonLabel }}</VaButton>
-      </div>
+    <div v-if="isReview" class="w-full">
+      <VaCard>
+        <VaCardContent>
+          <div class="flex justify-between items-center mb-2 mt-4 gap-4 w-full">
+            <div color="info">
+              Tổng số:
+              <strong class="text-primary">{{ getDaysInRange(startDate, endDate).length }}</strong>
+            </div>
+            <div>
+              Từ <strong>{{ startDate.toLocaleDateString('vi-VN') }}</strong> đến
+              <strong>{{ endDate.toLocaleDateString('vi-VN') }}</strong>
+            </div>
+          </div>
+          <VaDataTable
+            :items="getDaysInRange(startDate, endDate)"
+            :columns="columns"
+            animation="fade-in-up"
+            class="va-data-table w-full"
+            no-data-html="Không có lịch dạy phù hợp"
+          />
+          <VaAlert
+            v-if="checkExistCalendar && getDaysInRange(startDate, endDate).length > 0"
+            color="#fdeae7"
+            text-color="#940909"
+            icon="warning"
+            class="text-xs mb-6 mt-4"
+          >
+            Có lịch học trùng lặp. Vui lòng kiểm tra lại thời gian.
+          </VaAlert>
+          <div class="flex gap-2 flex-col-reverse items-stretch justify-end w-full sm:flex-row sm:items-center mt-4">
+            <VaButton preset="secondary" color="secondary" @click="isReview = !isReview">Huỷ</VaButton>
+            <VaButton :disabled="checkExistCalendar" @click="onSubmitCalendars">{{ saveButtonLabel }}</VaButton>
+          </div>
+        </VaCardContent>
+      </VaCard>
     </div>
   </VaForm>
 </template>
 
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
-import { VaTimeInput } from 'vuestic-ui'
+import { VaCardContent, VaTimeInput } from 'vuestic-ui'
 
 const props = defineProps({
   calendarToEdit: { type: Object, default: () => ({}) },
+  calendars: { type: Array, default: () => [] },
   teachers: { type: Array, default: () => [] },
   centers: { type: Array, default: () => [] },
   groups: { type: Array, default: () => [] },
   tkb: { type: Array, default: () => [] },
   saveButtonLabel: { type: String, default: '' },
+})
+
+const calendarOptions = computed(() => {
+  return props.calendars.map((calendar) => calendar.attendanceCode)
 })
 
 const teacherOptions = computed(() => {
@@ -181,8 +199,8 @@ const days = [
 ]
 
 const columns = [
-  { key: 'location', label: 'Trung tâm' },
-  { key: 'dateTime', label: 'Ngày tháng' },
+  { key: 'location', label: 'Cơ sở' },
+  { key: 'dateTime', label: 'Ngày tháng', sortable: true },
   { key: 'attendanceTime', label: 'Thời gian' },
   { key: 'group', label: 'Lớp học' },
   { key: 'teacher', label: 'Giáo viên' },
@@ -292,10 +310,20 @@ const isValid = computed(() => {
   return selection.value.length < 1 || dayObjects.value.length < 1 || selectedGroup.value == ''
 })
 
+const checkExistCalendar = computed(() => {
+  const newAttendanceCode = getDaysInRange(startDate.value, endDate.value).map((day) => day.attendanceCode)
+  const matchFound =
+    newAttendanceCode.length == 0 || calendarOptions.value.some((code) => newAttendanceCode.includes(code))
+  return matchFound
+})
 // const newCalendar = ref(defaultNewCalendar)
 
-// const emit = defineEmits(['close', 'save'])
+const emit = defineEmits(['close', 'save'])
 // const { confirm } = useModal()
+
+const onSubmitCalendars = () => {
+  emit('save', getDaysInRange(startDate.value, endDate.value))
+}
 
 const onSave = () => {
   isReview.value = true

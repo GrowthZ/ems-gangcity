@@ -19,7 +19,7 @@
         </div>
         <div class="font-light">
           <VaIcon :name="`mso-schedule`" class="mb-1 pr-2" color="warning" size="1.3rem" />
-          {{ calendar.turnTime }}
+          {{ calendar.attendanceTime }}
         </div>
         <div class="font-bold">
           <VaIcon :name="`mso-group`" class="mb-1 pr-2" color="success" size="1.5rem" />
@@ -217,6 +217,14 @@ const emit = defineEmits(['close', 'save'])
 const onSave = () => {
   const dataAttendance = {
     code: calendar.value.attendanceCode,
+    calendar: {
+      attendanceCode: calendar.value.attendanceCode,
+      dateTime: calendar.value.dateTime,
+      location: calendar.value.location,
+      group: calendar.value.group,
+      teacher: calendar.value.teacher,
+      subTeacher: calendar.value.subTeacher,
+    },
     studentMarks: studentMarks.value,
     studentMissings: studentUnmarks.value,
   }

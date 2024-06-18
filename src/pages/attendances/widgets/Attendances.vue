@@ -16,7 +16,7 @@
             href="#"
             stripe
             outlined
-            :stripe-color="calendar.attendanceCode == '' ? 'rgba(255, 193, 7, 0.5)' : 'success'"
+            :stripe-color="!checkCalendar(calendar) ? 'rgba(255, 193, 7, 0.5)' : 'success'"
           >
             <VaCardTitle class="flex justify-between">
               <span class="text-dark text-lg leading-7 font-bold">{{ calendar.location }}</span>
@@ -41,39 +41,46 @@
                   ></span
                 >
               </div>
-              <p>
-                <VaIcon :name="`mso-schedule`" class="font-light mb-1 pr-4" color="warning" size="1.6rem" />{{
-                  calendar.turnTime
-                }}
-              </p>
+              <div class="flex justify-between">
+                <span>
+                  <VaIcon :name="`mso-schedule`" class="font-light mb-1 pr-4" color="warning" size="1.6rem" />{{
+                    calendar.attendanceTime
+                  }}
+                </span>
+                <span class="pl-5">
+                  <VaIcon :name="`mso-handshake`" class="font-light mb-1 pr-1" color="secondary" size="1.6rem" />
+                  <span class="opacity-80">{{ calendar.subTeacher ? calendar.subTeacher : 'Chưa có' }}</span>
+                </span>
+              </div>
+
               <VaDivider class="my-3" />
               <div class="flex justify-between">
+                <VaButton
+                  preset="secondary"
+                  icon="mso-sync_alt"
+                  color="secondary"
+                  @click="showChangeTeacherModal(calendar)"
+                  >Đổi GV
+                </VaButton>
                 <VaButton
                   v-if="checkCalendar(calendar)"
                   preset="secondary"
                   icon="mso-edit"
                   color="info"
+                  class="text-xs"
                   @click="showAttendanceModal(calendar, true)"
                   >Sửa điểm danh</VaButton
                 >
                 <VaButton
                   v-if="!checkCalendar(calendar)"
-                  preset="secondary"
-                  icon="mso-sync_alt"
-                  color="secondary"
-                  @click="showChangeTeacherModal(calendar)"
-                  >Đổi giáo viên
-                </VaButton>
-                <VaButton
-                  v-if="!checkCalendar(calendar)"
-                  preset="primary"
+                  preset="success"
                   icon="mso-checklist"
                   color="primary"
                   class="gap-2"
                   @click="showAttendanceModal(calendar, false)"
                   >Điểm danh</VaButton
                 >
-                <VaButton
+                <!-- <VaButton
                   v-if="checkCalendar(calendar)"
                   preset="info"
                   icon="mso-check"
@@ -81,7 +88,7 @@
                   class="gap-2"
                   disabled
                   >Hoàn thành</VaButton
-                >
+                > -->
               </div>
             </VaCardContent>
           </VaCard>
@@ -175,6 +182,7 @@ const showMessageBox = (message: string, color: string) => {
   })
 }
 const sendData = async (data: any) => {
+  console.log(data)
   sending.value = true
   const res = await sendRequest(Action.markAttendance, data)
   if (res.status == 'success') {
@@ -217,6 +225,7 @@ const changeTeacherOfCalendar = (data: any) => {
   calendars.value = calendars.value.map((calendar) => {
     if (calendar.attendanceCode == data[0]) {
       calendar.teacher = data[1]
+      calendar.subTeacher = data[2]
     }
     return calendar
   })

@@ -68,6 +68,7 @@ export const Action = {
   getMarkedStudents: 'getMarkedStudents',
   changeTeacher: 'changeTeacherOfCalendar',
   updateStudentMissing: 'updateStudentMissing',
+  createCalendars: 'createCalendars',
 }
 
 interface SendRequestResult {

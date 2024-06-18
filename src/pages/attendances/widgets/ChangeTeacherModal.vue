@@ -19,11 +19,18 @@
         </div>
         <div class="font-light">
           <VaIcon :name="`mso-schedule`" class="mb-1 pr-2" color="warning" size="1.3rem" />
-          {{ calendar.turnTime }}
+          {{ calendar.attendanceTime }}
         </div>
       </div>
       <VaDivider class="my-3" />
       <VaSelect v-model="selectedTeacher" label="Giáo viên" placeholder="Chọn giáo viên" :options="uniqueTeachers" />
+      <VaSelect
+        v-model="selectedSubTeacher"
+        label="Trợ giảng"
+        placeholder="Chọn Trợ giảng"
+        :options="uniqueSubTeachers"
+        class="mt-4"
+      />
       <p class="va-text-secondary opacity-70 pt-2">* Chọn giáo viên mới để thay thế</p>
     </VaCardContent>
   </VaCard>
@@ -35,7 +42,7 @@
   </VaForm>
 </template>
 <script lang="ts" setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 
 const props = defineProps<{
   calendar: any
@@ -44,11 +51,17 @@ const props = defineProps<{
 
 const calendar = ref<any>(props.calendar)
 const teachers = ref<any[]>(props.teachers)
-const selectedTeacher = ref('')
+const selectedTeacher = ref<any>('')
+const selectedSubTeacher = ref<any>('')
 const teacherSelected = ref('')
 
+onMounted(() => {
+  selectedTeacher.value = findTeacher(calendar.value.teacher)
+  selectedSubTeacher.value = findTeacher(calendar.value.subTeacher)
+})
+
 const uniqueTeachers = computed(() => {
-  const teacherOthers = teachers.value.filter((teacher) => teacher.nickname !== calendar.value.teacher)
+  const teacherOthers = teachers.value.filter((teacher) => teacher)
   const uniqueTeachersArray = Array.from(teacherOthers).map((teacher) => ({
     value: teacher.nickname,
     text: teacher.nickname + ' - ' + teacher.fullname,
@@ -56,9 +69,30 @@ const uniqueTeachers = computed(() => {
   return teachers.value ? uniqueTeachersArray : []
 })
 
+const uniqueSubTeachers = computed(() => {
+  const teacherOthers = teachers.value.filter((teacher) => teacher)
+  const uniqueTeachersArray = Array.from(teacherOthers).map((teacher) => ({
+    value: teacher.nickname,
+    text: teacher.nickname + ' - ' + teacher.fullname,
+  }))
+  uniqueTeachersArray.push({ value: '', text: 'Chưa có' })
+  return teachers.value ? uniqueTeachersArray : []
+})
+
+const findTeacher = (nickname: string) => {
+  const teacher = teachers.value.find((teacher) => teacher.nickname === nickname)
+  if (!teacher) {
+    return { value: '', text: 'Chưa có' }
+  }
+  return {
+    value: teacher.nickname,
+    text: teacher.nickname + ' - ' + teacher.fullname,
+  }
+}
+
 const emit = defineEmits(['close', 'save'])
 const onSave = () => {
-  emit('save', [calendar.value.attendanceCode, teacherSelected.value])
+  emit('save', [calendar.value.attendanceCode, teacherSelected.value, selectedSubTeacher.value.value])
 }
 
 watch(
