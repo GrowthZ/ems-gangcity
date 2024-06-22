@@ -39,7 +39,7 @@ const routes: Array<RouteRecordRaw> = [
       {
         name: 'students',
         path: 'students',
-        component: () => import('../pages/students/student.vue'),
+        component: () => import('../pages/students/StudentsPage.vue'),
       },
       {
         name: 'projects',

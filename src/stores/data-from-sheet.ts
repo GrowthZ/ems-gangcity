@@ -52,6 +52,7 @@ function reverseArray(array: string | any[]) {
 
 export const DataSheet = {
   student: 'DanhSach',
+  followStudent: 'KiemSoatBuoiHoc',
   teacher: 'GiaoVien',
   calendar: 'LichDay',
   group: 'LopHoc2',
