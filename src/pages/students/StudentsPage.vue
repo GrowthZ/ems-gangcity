@@ -106,12 +106,7 @@
                 </div>
                 <div class="grid md:grid-cols-1">
                   <div class="flex items-center pt-2">
-                    <VaButton
-                      preset="primary"
-                      color="success"
-                      class="ml-6"
-                      @click="showAttendanceMissingModal(rowData)"
-                    >
+                    <VaButton preset="primary" color="success" class="ml-6" @click="showPayModal(rowData)">
                       <VaIcon size="medium" :name="`mso-currency_exchange`" color="success" class="mr-2" />
                       Đóng học
                     </VaButton>
@@ -174,12 +169,25 @@
       </div>
     </VaCardContent>
   </VaCard>
+  <VaModal v-slot="{ cancel, ok }" v-model="doShowPayModal" size="small" hide-default-actions>
+    <PayModal
+      :student-to-update="studentToUpdate"
+      @close="cancel"
+      @save="
+        (data) => {
+          sendUpdateStudentMissing(data)
+          ok()
+        }
+      "
+    />
+  </VaModal>
 </template>
 
 <script setup>
 import { ref, computed, watch } from 'vue'
 // import { useStudentData } from './useStudentData'
 import StudentModal from './components/StudentModal.vue'
+import PayModal from './components/PayModal.vue'
 import { sleep } from '../../services/utils'
 import { DataSheet } from '../../stores/data-from-sheet'
 import { useData } from '../../stores/use-data'
@@ -201,6 +209,10 @@ const isLoading = computed(() => store.loading)
 const locations = ref([])
 const followStudents = ref([])
 const mergedData = ref([])
+
+const doShowPayModal = ref(false)
+// const isPayModal = ref(false)
+const studentToUpdate = ref(undefined)
 
 store.load(DataSheet.student, [DataSheet.location, DataSheet.followStudent])
 
@@ -246,6 +258,11 @@ function customSort(a, b, key) {
 const callStudent = (phone) => {
   if (!phone) return
   window.location.href = `tel:${phone}`
+}
+
+const showPayModal = (student) => {
+  studentToUpdate.value = student
+  doShowPayModal.value = true
 }
 
 // const columnsWithName = columns.map((column) => {
