@@ -149,7 +149,7 @@
   </VaModal>
 
   <VaModal v-slot="{ cancel, ok }" v-model="doShowStudentModal" size="small" hide-default-actions mobile-fullscreen>
-    <StudentModal
+    <NewStudentModal
       :student-to-update="studentToUpdate"
       :locations="locations"
       :groups="groups"
@@ -174,7 +174,7 @@ import { sleep } from '../../services/utils'
 import { DataSheet, showMessageBox, Action, sendRequest } from '../../stores/data-from-sheet'
 import { useData } from '../../stores/use-data'
 import PayModal from './components/PayModal.vue'
-import StudentModal from './components/StudentModal.vue'
+import NewStudentModal from './components/NewStudentModal.vue'
 
 const filter = ref('')
 const filterByFields = ref([])
