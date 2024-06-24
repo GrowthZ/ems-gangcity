@@ -32,7 +32,12 @@
           required-mark
         />
         <VaInput v-model="newStudent.nickname" label="Biệt danh" :rules="[validators.required]" name="fullname" />
-        <VaInput v-model="newStudent.phone" label="Số điện thoại" :rules="[validators.required]" name="phone" />
+        <VaInput
+          v-model="newStudent.phoneNumber"
+          label="Số điện thoại"
+          :rules="[validators.required]"
+          name="phoneNumber"
+        />
         <VaSelect
           v-model="newStudent.gender"
           label="Giới tính"
@@ -180,17 +185,22 @@ function parseDate(dateString: any) {
   return new Date(year, month - 1, day)
 }
 
-const emit = defineEmits(['close', 'save'])
+const emit = defineEmits(['close', 'save', 'update'])
 
 const onSave = () => {
-  const code = generateStudentCode()
-  newStudent.value.code = code
-  newStudent.value.location = getTextByValue(locationOptions, newStudent.value.location)
   newStudent.value.status = getTextByValue(statusList, newStudent.value.status)
   newStudent.value.gender = getTextByValue(genderOptions, newStudent.value.gender)
   newStudent.value.birthday = formatDate(newStudent.value.birthday)
   newStudent.value.dateStart = formatDate(newStudent.value.dateStart)
-  emit('save', newStudent.value)
+  if (!student.value) {
+    const code = generateStudentCode()
+    newStudent.value.code = code
+    newStudent.value.location = getTextByValue(locationOptions, newStudent.value.location)
+    emit('save', newStudent.value)
+  } else {
+    newStudent.value.location = getTextByValue(locationOptions, newStudent.value.location)
+    emit('update', newStudent.value)
+  }
 }
 const isValidated = computed(() => {
   return newStudent.value.location == '' || newStudent.value.fullname == ''

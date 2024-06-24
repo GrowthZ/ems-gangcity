@@ -73,10 +73,10 @@
                   <div class="flex items-center pt-2">
                     <VaIcon size="small" :name="`mso-phone`" color="primary" class="mr-2" />
                     <button
-                      :class="rowData.phone ? 'text-decoration-underline text-primary' : 'opacity-70'"
-                      @click="callStudent(rowData.phone)"
+                      :class="rowData.phoneNumber ? 'text-decoration-underline text-primary' : 'opacity-70'"
+                      @click="callStudent(rowData.phoneNumber)"
                     >
-                      {{ rowData.phone ? rowData.phone : 'Chưa cập nhật' }}
+                      {{ rowData.phoneNumber ? rowData.phoneNumber : 'Chưa cập nhật' }}
                     </button>
                   </div>
                 </div>
@@ -157,8 +157,14 @@
       @close="cancel"
       @save="
         (data) => {
-          console.log(data)
           sendNewStudent(data)
+          ok()
+        }
+      "
+      @update="
+        (data) => {
+          console.log(data)
+          sendUpdateStudent(data)
           ok()
         }
       "
@@ -275,7 +281,7 @@ const sendPayment = async (dataJson) => {
 
   if (res.status == 'success') {
     showMessageBox(`Đóng học thành công!`, 'success')
-    updateStudent(dataJson)
+    updateStudentLesson(dataJson)
   } else {
     showMessageBox(`Đóng học thất bại!`, 'danger')
   }
@@ -288,7 +294,7 @@ const sendUpdateLesson = async (dataJson) => {
 
   if (res.status == 'success') {
     showMessageBox(`Điều chỉnh thành công!`, 'success')
-    updateStudent(dataJson)
+    updateStudentLesson(dataJson)
   } else {
     showMessageBox(`Điều chỉnh thất bại!`, 'danger')
   }
@@ -301,9 +307,22 @@ const sendNewStudent = async (dataJson) => {
 
   if (res.status == 'success') {
     showMessageBox(`Thêm mới học sinh thành công!`, 'success')
-    // updateStudent(dataJson)
+    createNewStudent(dataJson)
   } else {
     showMessageBox(`Thêm mới học sinh thất bại!`, 'danger')
+  }
+  store.loading = false
+}
+
+const sendUpdateStudent = async (dataJson) => {
+  store.loading = true
+  const res = await sendRequest(Action.updateStudent, dataJson)
+
+  if (res.status == 'success') {
+    showMessageBox(`Cập nhật thông tin thành công!`, 'success')
+    updateStudent(dataJson)
+  } else {
+    showMessageBox(`Cập nhật thông tin thất bại!`, 'danger')
   }
   store.loading = false
 }
@@ -390,7 +409,7 @@ const isPaginationVisible = computed(() => {
   return totalPages.value > 1
 })
 
-const updateStudent = (data) => {
+const updateStudentLesson = (data) => {
   followStudents.value = followStudents.value.map((item) => {
     if (item.code == data.studentCode) {
       item.buoiConLai = parseInt(item.buoiConLai) + parseInt(data.lesson)
@@ -398,6 +417,29 @@ const updateStudent = (data) => {
     return item
   })
   mergedData.value = mergeArrays(items.value, followStudents.value)
+}
+
+const createNewStudent = (data) => {
+  items.value.unshift(data)
+  mergedData.value = mergeArrays(items.value, followStudents.value)
+}
+
+const updateStudent = (data) => {
+  items.value = items.value.map((item) => {
+    if (item.code == data.code) {
+      copyProperties(item, data)
+    }
+    return item
+  })
+  mergedData.value = mergeArrays(items.value, followStudents.value)
+}
+
+const copyProperties = (target, source) => {
+  for (const key in source) {
+    if (Object.prototype.hasOwnProperty.call(target, key)) {
+      target[key] = source[key]
+    }
+  }
 }
 // fetchStudents()
 

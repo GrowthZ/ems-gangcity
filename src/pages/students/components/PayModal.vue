@@ -107,7 +107,7 @@ const isPayment = ref<boolean>(props.isPaymentModal)
 const btnLabel = computed(() => (isPayment.value ? 'Đóng học' : 'Cập nhật'))
 const placeholderText = computed(() => (isPayment.value ? 'Thông tin đóng học...' : 'Thông tin điều chỉnh...'))
 
-const statusList = ref<any>([
+const typeOptions = ref<any>([
   { value: 'Khoa', text: 'Đóng theo khoá', color: 'success' },
   { value: 'Le', text: 'Đóng gói lẻ', color: 'warning' },
 ])
@@ -127,14 +127,14 @@ const payment: any = {
 const newPayment = ref<any>({ ...payment })
 
 const statusOptions = computed(() => {
-  const statusArray = Array.from(statusList.value)
+  const statusArray = Array.from(typeOptions.value)
     .filter((status: any) => status.value !== '')
     .map((status: any) => ({
       value: status.value,
       text: status.text,
       color: status.color,
     }))
-  return statusList.value ? statusArray : []
+  return typeOptions.value ? statusArray : []
 })
 
 const isValidated = computed(() => {
