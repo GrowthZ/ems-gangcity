@@ -4,34 +4,10 @@
       <h1 class="page-title">Học viên</h1>
     </div>
     <div>
-      <VaButton @click="$refs.modal.show()"> + Thêm học viên </VaButton>
+      <VaButton> + Thêm học viên </VaButton>
     </div>
   </div>
-  <VaModal
-    ref="modal"
-    v-slot="{ cancel, ok }"
-    v-model="doShowModal"
-    size="small"
-    mobile-fullscreen
-    close-button
-    hide-default-actions
-  >
-    <h1 class="va-h5">{{ studentToEdit ? 'Cập nhật học viên' : 'Thêm mới học viên' }}</h1>
-    <StudentModal
-      v-if="doShowModal"
-      v-model="doShowModal"
-      :student="studentToEdit"
-      :save-button-label="studentToEdit ? 'Cập nhật' : 'Thêm mới'"
-      @close="cancel"
-      @save="
-        (student) => {
-          console.log('student', student)
-          onSave(student)
-          ok()
-        }
-      "
-    />
-  </VaModal>
+
   <VaCard>
     <VaCardContent>
       <div>
@@ -186,11 +162,11 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 // import { useStudentData } from './useStudentData'
-import StudentModal from './components/StudentModal.vue'
-import PayModal from './components/PayModal.vue'
+
 import { sleep } from '../../services/utils'
 import { DataSheet } from '../../stores/data-from-sheet'
 import { useData } from '../../stores/use-data'
+import PayModal from './components/PayModal.vue'
 
 const filter = ref('')
 const filterByFields = ref([])
@@ -198,8 +174,8 @@ const filteredCount = ref(0)
 const selectedGroup = ref('')
 const pageSize = 15 // Số lượng mục trên mỗi trang
 const currentPage = ref(1) // Trang hiện tại
-const doShowModal = ref(false)
-const studentToEdit = (ref < import('./types').Student) | (null > null)
+// const doShowModal = ref(false)
+// const studentToEdit = (ref < import('./types').Student) | (null > null)
 
 const store = useData()
 
