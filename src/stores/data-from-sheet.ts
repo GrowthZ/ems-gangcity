@@ -53,9 +53,11 @@ function reverseArray(array: string | any[]) {
 export const DataSheet = {
   student: 'DanhSach',
   followStudent: 'KiemSoatBuoiHoc',
+  payment: 'DongHoc',
+  lessonUpdate: 'DieuChinh',
   teacher: 'GiaoVien',
   calendar: 'LichDay',
-  group: 'LopHoc2',
+  group: 'LopHoc',
   location: 'CoSo',
   attendance: 'DiemDanh',
   attendanceMissing: 'DiemDanhNghi',
@@ -70,6 +72,10 @@ export const Action = {
   changeTeacher: 'changeTeacherOfCalendar',
   updateStudentMissing: 'updateStudentMissing',
   createCalendars: 'createCalendars',
+  createPayment: 'createPayment',
+  updateLesson: 'updateLesson',
+  newStudent: 'newStudent',
+  updateStudent: 'updateStudent',
 }
 
 interface SendRequestResult {

@@ -4,7 +4,7 @@
       <h1 class="page-title">Giáo viên</h1>
     </div>
     <div>
-      <VaButton @click="$refs.modal.show()"> + Thêm giáo viên </VaButton>
+      <VaButton hidden @click="$refs.modal.show()"> + Thêm giáo viên </VaButton>
     </div>
   </div>
   <VaCard>

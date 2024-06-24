@@ -4,7 +4,7 @@
       <h1 class="page-title">Học viên</h1>
     </div>
     <div>
-      <VaButton> + Thêm học viên </VaButton>
+      <VaButton @click="showStudentModal()"> + Thêm học viên </VaButton>
     </div>
   </div>
 
@@ -88,35 +88,18 @@
                     </VaButton>
                   </div>
                   <div class="flex items-center pt-2">
-                    <VaButton preset="primary" color="info" class="ml-6" @click="showAttendanceMissingModal(rowData)">
+                    <VaButton preset="primary" color="info" class="ml-6" @click="showUpdateLessonModal(rowData)">
                       <VaIcon size="medium" :name="`mso-swap_vert`" color="info" class="mr-2" />
                       Sửa buổi
                     </VaButton>
                   </div>
                   <div class="flex items-center pt-2">
-                    <VaButton preset="primary" class="ml-6" @click="showAttendanceMissingModal(rowData)">
+                    <VaButton preset="primary" class="ml-6" @click="showUpdateStudentModal(rowData)">
                       <VaIcon size="medium" :name="`mso-edit_square`" color="primary" class="mr-2" />
                       Cập nhật
                     </VaButton>
                   </div>
                 </div>
-
-                <!-- <div class="flex items-center pt-2 m-auto" @click="callStudent(rowData.phoneNumber)">
-              <VaButton preset="secondary" color="success" class="ml-6 mb-2">
-                <VaIcon size="medium" :name="`mso-phone`" color="success" class="mr-2" />
-                Gọi điện
-              </VaButton>
-            </div>
-            <div class="flex items-center">
-              <VaIcon size="small" name="school" color="primary" class="mr-2" />
-              <span>{{ rowData.group }}</span>
-            </div>
-            <div class="flex items-center pt-2 m-auto">
-              <VaButton preset="primary" class="ml-6 mb-2" @click="showAttendanceMissingModal(rowData)">
-                <VaIcon size="small" :name="`mso-edit_square`" color="primary" class="mr-2" />
-                Cập nhật
-              </VaButton>
-            </div> -->
               </div>
             </div>
             <VaDivider class="my-3" />
@@ -148,10 +131,34 @@
   <VaModal v-slot="{ cancel, ok }" v-model="doShowPayModal" size="small" hide-default-actions>
     <PayModal
       :student-to-update="studentToUpdate"
+      :is-payment-modal="isPaymentModal"
       @close="cancel"
       @save="
         (data) => {
-          sendUpdateStudentMissing(data)
+          sendPayment(data)
+          ok()
+        }
+      "
+      @updateLesson="
+        (data) => {
+          sendUpdateLesson(data)
+          ok()
+        }
+      "
+    />
+  </VaModal>
+
+  <VaModal v-slot="{ cancel, ok }" v-model="doShowStudentModal" size="small" hide-default-actions mobile-fullscreen>
+    <StudentModal
+      :student-to-update="studentToUpdate"
+      :locations="locations"
+      :groups="groups"
+      :students="items"
+      @close="cancel"
+      @save="
+        (data) => {
+          console.log(data)
+          sendNewStudent(data)
           ok()
         }
       "
@@ -164,9 +171,10 @@ import { ref, computed, watch } from 'vue'
 // import { useStudentData } from './useStudentData'
 
 import { sleep } from '../../services/utils'
-import { DataSheet } from '../../stores/data-from-sheet'
+import { DataSheet, showMessageBox, Action, sendRequest } from '../../stores/data-from-sheet'
 import { useData } from '../../stores/use-data'
 import PayModal from './components/PayModal.vue'
+import StudentModal from './components/StudentModal.vue'
 
 const filter = ref('')
 const filterByFields = ref([])
@@ -185,19 +193,22 @@ const isLoading = computed(() => store.loading)
 const locations = ref([])
 const followStudents = ref([])
 const mergedData = ref([])
+const groups = ref([])
 
 const doShowPayModal = ref(false)
-// const isPayModal = ref(false)
+const isPaymentModal = ref(false)
 const studentToUpdate = ref(undefined)
 
-store.load(DataSheet.student, [DataSheet.location, DataSheet.followStudent])
+const doShowStudentModal = ref(false)
+
+store.load(DataSheet.student, [DataSheet.location, DataSheet.followStudent, DataSheet.group])
 
 watch(anotherData, (newData) => {
   if (newData) {
     locations.value = newData[0]
     followStudents.value = newData[1]
+    groups.value = newData[2]
     mergedData.value = mergeArrays(items.value, followStudents.value)
-    console.log('mergedData', mergedData.value)
   }
 })
 
@@ -237,8 +248,64 @@ const callStudent = (phone) => {
 }
 
 const showPayModal = (student) => {
+  isPaymentModal.value = true
   studentToUpdate.value = student
   doShowPayModal.value = true
+}
+
+const showUpdateLessonModal = (student) => {
+  isPaymentModal.value = false
+  studentToUpdate.value = student
+  doShowPayModal.value = true
+}
+
+const showStudentModal = () => {
+  studentToUpdate.value = undefined
+  doShowStudentModal.value = true
+}
+
+const showUpdateStudentModal = (student) => {
+  studentToUpdate.value = student
+  doShowStudentModal.value = true
+}
+
+const sendPayment = async (dataJson) => {
+  store.loading = true
+  const res = await sendRequest(Action.createPayment, dataJson)
+
+  if (res.status == 'success') {
+    showMessageBox(`Đóng học thành công!`, 'success')
+    updateStudent(dataJson)
+  } else {
+    showMessageBox(`Đóng học thất bại!`, 'danger')
+  }
+  store.loading = false
+}
+
+const sendUpdateLesson = async (dataJson) => {
+  store.loading = true
+  const res = await sendRequest(Action.updateLesson, dataJson)
+
+  if (res.status == 'success') {
+    showMessageBox(`Điều chỉnh thành công!`, 'success')
+    updateStudent(dataJson)
+  } else {
+    showMessageBox(`Điều chỉnh thất bại!`, 'danger')
+  }
+  store.loading = false
+}
+
+const sendNewStudent = async (dataJson) => {
+  store.loading = true
+  const res = await sendRequest(Action.newStudent, dataJson)
+
+  if (res.status == 'success') {
+    showMessageBox(`Thêm mới học sinh thành công!`, 'success')
+    // updateStudent(dataJson)
+  } else {
+    showMessageBox(`Thêm mới học sinh thất bại!`, 'danger')
+  }
+  store.loading = false
 }
 
 // const columnsWithName = columns.map((column) => {
@@ -323,6 +390,15 @@ const isPaginationVisible = computed(() => {
   return totalPages.value > 1
 })
 
+const updateStudent = (data) => {
+  followStudents.value = followStudents.value.map((item) => {
+    if (item.code == data.studentCode) {
+      item.buoiConLai = parseInt(item.buoiConLai) + parseInt(data.lesson)
+    }
+    return item
+  })
+  mergedData.value = mergeArrays(items.value, followStudents.value)
+}
 // fetchStudents()
 
 watch(selectedGroup, () => {
@@ -333,10 +409,11 @@ watch(selectedGroup, () => {
   })
   // currentPage.value = 1
 })
+
 const getColor = (value) => {
   if (value > 3 || value == 'Đang học') {
     return 'success'
-  } else if ((value <= 3) & (value > 0) || value == 'Tạm nghỉ') {
+  } else if ((value <= 3 && value > 0) || value == 'Tạm nghỉ') {
     return 'warning'
   } else {
     return 'danger'

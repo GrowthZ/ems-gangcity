@@ -81,7 +81,7 @@ const submit = () => {
 const page = () => {
   const user = JSON.parse(localStorage.getItem('user')!)
   if (user.role == 'admin') {
-    return 'dashboard'
+    return 'teacher-salary'
   } else if (user.role == 'teacher' || user.role == 'manager') {
     return 'attendances'
   } else {
