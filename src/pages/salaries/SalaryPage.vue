@@ -198,9 +198,11 @@ const filteredItems = computed(() => {
     }
 
     if (isMonthSelected) {
-      if (item?.date) {
-        const itemMonth = parseInt(item.date.split('/')[1], 10)
-        if (itemMonth !== parseInt(selectedMonth.value, 10)) {
+      console.log(item)
+      if (item?.dateTime) {
+        const itemMonth = parseInt(item.dateTime.split('/')[1], 10)
+        console.log(itemMonth, selectedMonth.value)
+        if (itemMonth != parseInt(selectedMonth.value, 10)) {
           return false
         }
       }
