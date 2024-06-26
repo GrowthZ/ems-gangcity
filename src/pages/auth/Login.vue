@@ -13,6 +13,7 @@
       label="Tên đăng nhập"
       type="text"
       error-messages="Vui lòng nhập tên đăng nhập"
+      :disabled="loading"
     />
     <VaValue v-slot="isPasswordVisible" :default-value="false">
       <VaInput
@@ -22,6 +23,7 @@
         class="mb-4"
         label="Mật khẩu"
         error-messages="Vui lòng nhập mật khẩu"
+        :disabled="loading"
         @clickAppendInner.stop="isPasswordVisible.value = !isPasswordVisible.value"
       >
         <template #appendInner>
@@ -102,6 +104,9 @@ const checkLogin = async (username: string, password: string) => {
     init({ message: 'Đăng nhập thành công', color: 'success' })
     loading.value = false
     push({ name: page() })
+  } else {
+    init({ message: 'Sai tài khoản. Đăng nhập thất bại', color: 'danger' })
+    loading.value = false
   }
 }
 </script>
