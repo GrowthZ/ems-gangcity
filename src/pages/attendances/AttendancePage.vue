@@ -104,7 +104,7 @@ data.load(DataSheet.calendar, [DataSheet.student, DataSheet.location, DataSheet.
 
 watch(anotherData, (newData) => {
   if (newData) {
-    students.value = newData[0]
+    students.value = newData[0].map((student) => student.status == 'Đang học')
     locations.value = newData[1]
     teachers.value = newData[2]
   }
