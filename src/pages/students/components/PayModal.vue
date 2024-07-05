@@ -51,6 +51,7 @@
         label="Số tiền"
         placeholder="Nhập số tiền"
         class="pt-4"
+        type="number"
         required-mark
       >
         <template #prependInner>
