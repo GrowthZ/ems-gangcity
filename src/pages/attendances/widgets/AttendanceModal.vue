@@ -87,11 +87,12 @@
                 </template>
               </VaCheckbox>
               <VaIcon
+                v-if="student.phoneNumber"
                 name="phone_in_talk"
                 size="24px"
                 color="info"
                 class="mso-phone_in_talk"
-                @click="callStudent(student.phone)"
+                @click="callStudent(student.phoneNumber)"
               />
             </div>
           </div>
@@ -243,7 +244,7 @@ const calculateScrollContainerHeight = () => {
   const isMobile = window.innerWidth < 768 // Xác định xem màn hình có phải là thiết bị di động hay không
   // Nếu là thiết bị di động, sử dụng max-height cách bottom 200px, ngược lại sử dụng max-height 350px
   if (isMobile) {
-    scrollContainerHeight.value = `calc(100vh - 300px)`
+    scrollContainerHeight.value = `calc(100vh - 400px)`
   } else {
     scrollContainerHeight.value = `400px`
   }

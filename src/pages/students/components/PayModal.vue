@@ -52,8 +52,6 @@
         placeholder="Nhập số tiền"
         class="pt-4"
         required-mark
-        :parse="parseMoney"
-        :format="formatMoney"
       >
         <template #prependInner>
           <VaIcon :name="`mso-payments`" color="primary" />
@@ -161,21 +159,6 @@ function formatDate(date: any) {
   const month = String(date.getMonth() + 1).padStart(2, '0') // Tháng bắt đầu từ 0
   const year = date.getFullYear()
   return `${day}/${month}/${year}`
-}
-
-const formatMoney = (value: any) => {
-  if (typeof value === 'number') {
-    return value.toLocaleString('vi-VN', {
-      style: 'currency',
-      currency: 'VND',
-    })
-  }
-  return value
-}
-
-const parseMoney = (value: any) => {
-  const number = parseFloat(value.replace(/[^\d.-]/g, ''))
-  return isNaN(number) ? 0 : number
 }
 
 const getColor = (value: any) => {
