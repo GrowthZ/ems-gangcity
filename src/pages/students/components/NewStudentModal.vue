@@ -46,23 +46,25 @@
           value-by="value"
           name="gender"
         />
-        <VaDateInput
-          v-model="newStudent.birthday"
-          label="Ngày sinh"
-          :rules="[validators.required]"
-          name="birthday"
-          :parse="parseDate"
-          :format="formatDate"
-        />
-        <VaDateInput
-          v-model="newStudent.dateStart"
-          label="Ngày bắt đầu"
-          :rules="[validators.required]"
-          name="dateStart"
-          :parse="parseDate"
-          :format="formatDate"
-        />
       </div>
+      <VaDateInput
+        v-model="newStudent.birthday"
+        label="Ngày sinh"
+        :rules="[validators.required]"
+        name="birthday"
+        :parse="parseDate"
+        :format="formatDate"
+        class="w-full"
+      />
+      <VaDateInput
+        v-model="newStudent.dateStart"
+        label="Ngày bắt đầu"
+        :rules="[validators.required]"
+        name="dateStart"
+        :parse="parseDate"
+        :format="formatDate"
+        class="w-full"
+      />
       <VaSelect
         v-model="newStudent.status"
         label="Trạng thái"
