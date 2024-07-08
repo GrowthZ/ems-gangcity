@@ -55,6 +55,7 @@
         :parse="parseDate"
         :format="formatDate"
         class="w-full"
+        manual-input
       />
       <VaDateInput
         v-model="newStudent.dateStart"
@@ -64,6 +65,7 @@
         :parse="parseDate"
         :format="formatDate"
         class="w-full"
+        manual-input
       />
       <VaSelect
         v-model="newStudent.status"
