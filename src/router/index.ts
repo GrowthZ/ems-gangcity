@@ -60,6 +60,11 @@ const routes: Array<RouteRecordRaw> = [
         ],
       },
       {
+        name: 'reports',
+        path: 'reports',
+        component: () => import('../pages/reports/ReportPage.vue'),
+      },
+      {
         name: 'teacher-salary',
         path: 'teacher-salary',
         component: () => import('../pages/salaries/SalaryPage.vue'),

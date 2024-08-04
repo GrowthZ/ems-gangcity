@@ -67,6 +67,13 @@ export default {
         icon: 'calendar_month',
       },
     },
+    {
+      name: 'reports',
+      displayName: 'menu.reports',
+      meta: {
+        icon: 'summarize',
+      },
+    },
     // {
     //   name: 'projects',
     //   displayName: 'menu.projects',
