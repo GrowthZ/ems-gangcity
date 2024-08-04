@@ -22,13 +22,13 @@
             :options="uniqueMonths"
             value-by="value"
           />
-          <!-- <VaSelect
-              v-model="selectedGroup"
-              label="Cơ sở"
-              placeholder="Chọn cơ sở"
-              :options="uniqueGroups"
-              value-by="value"
-            /> -->
+          <VaSelect
+            v-model="selectedGroup"
+            label="Lớp học"
+            placeholder="Chọn lớp học"
+            :options="uniqueGroups"
+            value-by="value"
+          />
         </div>
         <!-- </VaCollapse> -->
         <VaDataTable
@@ -122,13 +122,13 @@ const columns = [
   { key: 'tongLuongSub', label: 'Lương phụ' },
 ]
 
-// const uniqueGroups = computed(() => {
-//   // Tạo danh sách các giá trị duy nhất của cột group
-//   const groups = new Set(items.value.map((item) => item.group))
-//   const uniqueGroupsArray = Array.from(groups).map((group) => ({ value: group, text: group }))
-//   uniqueGroupsArray.unshift({ value: '', text: 'Tất cả' })
-//   return items.value ? uniqueGroupsArray : []
-// })
+const uniqueGroups = computed(() => {
+  // Tạo danh sách các giá trị duy nhất của cột group
+  const groups = new Set(items.value.map((item) => item.group))
+  const uniqueGroupsArray = Array.from(groups).map((group) => ({ value: group, text: group }))
+  uniqueGroupsArray.unshift({ value: '', text: 'Tất cả' })
+  return items.value ? uniqueGroupsArray : []
+})
 
 // const uniqueTeachers = computed(() => {
 //   // Tạo danh sách các giá trị duy nhất của cột teacher
