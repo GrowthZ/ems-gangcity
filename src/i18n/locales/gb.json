@@ -64,7 +64,8 @@
     "teacher-salary": "Bảng lương",
     "attendances": "Điểm danh",
     "attendances-student-missing": "Danh sách nghỉ",
-    "calendar-list": "Lịch học"
+    "calendar-list": "Lịch học",
+    "update-class-month": "Cập nhật tháng"
   },
   "messages": {
     "all": "See all messages",

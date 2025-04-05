@@ -121,7 +121,6 @@
               active-page-color="primary"
               gapped
               class="pagination"
-              :sort-by="customSort"
             />
           </div>
         </div>
@@ -215,6 +214,7 @@ watch(anotherData, (newData) => {
     followStudents.value = newData[1]
     groups.value = newData[2]
     mergedData.value = mergeArrays(items.value, followStudents.value)
+    console.log('Merged Data:', mergedData.value) // Debug merged data
   }
 })
 
@@ -222,7 +222,15 @@ const columns = [
   { key: 'actions', label: 'Xem' },
   { key: 'fullname', sortable: true, label: 'Tên' },
   { key: 'group', sortable: true, label: 'Lớp' },
-  { key: 'buoiConLai', sortable: true, label: 'Buổi còn lại', sortBy: (a, b) => customSort(a, b, 'buoiConLai') },
+  {
+    key: 'buoiConLai',
+    sortable: true,
+    label: 'Buổi còn lại',
+    sortMethod: (a, b) => {
+      console.log(`Comparing: ${a} vs ${b}`) // Debug giá trị khi sắp xếp
+      return Number(a || 0) - Number(b || 0)
+    },
+  },
   { key: 'status', label: 'Trạng thái' },
 ]
 
@@ -236,16 +244,6 @@ function mergeArrays(arr1, arr2) {
       buoiConLai: item2 ? parseInt(item2.buoiConLai) : 0,
     }
   })
-}
-
-function customSort(a, b, key) {
-  if (key === 'buoiConLai') {
-    const numA = parseInt(a[key], 10)
-    const numB = parseInt(b[key], 10)
-    return numA - numB
-  }
-  // Default sorting behavior
-  return a[key] > b[key] ? 1 : -1
 }
 
 const callStudent = (phone) => {

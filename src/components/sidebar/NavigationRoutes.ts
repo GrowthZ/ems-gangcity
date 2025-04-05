@@ -74,6 +74,13 @@ export default {
         icon: 'summarize',
       },
     },
+    {
+      name: 'update-class-month',
+      displayName: 'menu.update-class-month',
+      meta: {
+        icon: 'calendar_today',
+      },
+    },
     // {
     //   name: 'projects',
     //   displayName: 'menu.projects',

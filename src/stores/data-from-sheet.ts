@@ -60,8 +60,10 @@ export const DataSheet = {
   group: 'LopHoc',
   location: 'CoSo',
   attendance: 'DiemDanh',
+  attendaceDetail: 'DiemDanhChiTiet',
   attendanceMissing: 'DiemDanhNghi',
   tkb: 'TKB',
+  studentUpdateMonth: 'DieuChinhTheoQuyDinh',
 }
 
 export const Action = {
@@ -76,6 +78,7 @@ export const Action = {
   updateLesson: 'updateLesson',
   newStudent: 'newStudent',
   updateStudent: 'updateStudent',
+  updateStudentByMonth: 'updateStudentByMonth',
 }
 
 interface SendRequestResult {
@@ -86,7 +89,9 @@ interface SendRequestResult {
 
 export const sendRequest = async (action: string, param: string): Promise<SendRequestResult> => {
   try {
+    console.log(`Gửi dữ liệu đến Google Apps Script với action: ${action} và param: ${JSON.stringify(param)}`)
     const response = await axiosInstance.get(`${scriptUrl}?action=${action}&param=${JSON.stringify(param)}`)
+    console.log(`Dữ liệu đã được gửi đến Google Apps Script`, response.data)
     console.log(`Dữ liệu đã được thêm vào sheet`)
     return {
       status: 'success',
