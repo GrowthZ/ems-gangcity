@@ -36,9 +36,18 @@
             :options="uniqueGroups"
             value-by="value"
           />
-          <VaButton preset="primary" color="success" class="mt-4" @click="sendUpdateLesson(computedItems)">
-            <VaIcon :name="`mso-cloud_upload`" color="success" class="mr-2" />
-            Cập nhật
+          <VaButton
+            v-if="canUpdate"
+            color="success"
+            class="mt-4"
+            :disabled="alreadyUpdateChecked"
+            @click="sendUpdateLesson(computedItems)"
+          >
+            <VaIcon :name="`mso-${alreadyUpdateChecked ? 'check_circle' : 'cloud_upload'}`" class="mr-2" />
+            {{ alreadyUpdateChecked ? 'Đã cập nhật' : 'Cập nhật' }}
+          </VaButton>
+          <VaButton v-if="!canUpdate" :disabled="true" color="warning" icon="mso-warning" class="mt-4">
+            Chọn đủ thông tin
           </VaButton>
         </div>
         <!-- </VaCollapse> -->
@@ -109,8 +118,14 @@ const loading = computed(() => data.loading)
 const attendances = ref([])
 const locations = ref([])
 const students = ref([])
+const dataStudentUpdateMonth = ref([])
 
-data.load(DataSheet.followStudent, [DataSheet.attendaceDetail, DataSheet.location, DataSheet.student])
+data.load(DataSheet.followStudent, [
+  DataSheet.attendaceDetail,
+  DataSheet.location,
+  DataSheet.student,
+  DataSheet.studentUpdateMonth,
+])
 
 const user = JSON.parse(localStorage.getItem('user') || '{}')
 
@@ -122,6 +137,7 @@ watch(anotherData, (newData) => {
     attendances.value = newData[0]
     locations.value = newData[1]
     students.value = newData[2]
+    dataStudentUpdateMonth.value = newData[3]
   }
 })
 
@@ -136,7 +152,7 @@ const columns = [
 
 const uniqueGroups = computed(() => {
   // Tạo danh sách các giá trị duy nhất của cột group
-  const groups = new Set(items.value.map((item) => item.group))
+  const groups = new Set(filteredGroups.value.map((item) => item.group))
   const uniqueGroupsArray = Array.from(groups).map((group) => ({ value: group, text: group }))
   uniqueGroupsArray.unshift({ value: '', text: 'Tất cả' })
   return items.value ? uniqueGroupsArray : []
@@ -249,6 +265,23 @@ const filteredItems = computed(() => {
   })
 })
 
+const filteredGroups = computed(() => {
+  return items.value.filter((item) => {
+    // Bỏ qua nếu không thuộc danh sách đang học
+    if (!studyingStudentIds.value.includes(item?.code)) {
+      return false
+    }
+
+    // Nếu người dùng đã chọn cơ sở, kiểm tra xem item có khớp không
+    const isLocationSelected = selectedLocation.value !== ''
+    if (isLocationSelected && getLocationFromCode(item?.code) !== selectedLocation.value) {
+      return false
+    }
+
+    return true
+  })
+})
+
 const attendanceByMonth = computed(() => {
   return attendances.value.reduce((acc, record) => {
     const { studentCode, fullname, dateTime } = record
@@ -264,6 +297,14 @@ const attendanceByMonth = computed(() => {
   }, {})
 })
 const attendanceArray = computed(() => Object.values(attendanceByMonth.value))
+
+const canUpdate = computed(() => {
+  const isLocationValid = selectedLocation.value && selectedLocation.value !== 'Tất cả'
+  const isGroupValid = selectedGroup.value && selectedGroup.value !== 'Tất cả'
+  const isMonthValid = selectedMonth.value && selectedMonth.value !== 'Tất cả'
+
+  return isLocationValid && isGroupValid && isMonthValid
+})
 
 const computedItems = computed(() => {
   return filteredItems.value.map((item) => {
@@ -281,6 +322,17 @@ const computedItems = computed(() => {
       soBuoiTieuChuan,
       soBuoiSauDieuChinh,
     }
+  })
+})
+const alreadyUpdateChecked = computed(() => {
+  return dataStudentUpdateMonth.value.some((row) => {
+    const [month, year] = row.dateUpdate.split('/')
+    return (
+      row.location == selectedLocation.value &&
+      selectedMonth.value == month &&
+      date.getFullYear() == year &&
+      row.note == selectedGroup.value
+    )
   })
 })
 
@@ -303,13 +355,21 @@ const sendUpdateLesson = async (dataJson) => {
   }
 
   const dataUpdated = await fetchDataSheet(DataSheet.studentUpdateMonth)
-  const alreadyUpdated = dataToSend.some((item) => {
-    return dataUpdated.some((row) => {
-      return row.dataUpdate == item?.dateUpdate, getLocationFromCode(item?.studentCode) == row.location
-    })
+  const selectedFormatted = `${Number(selectedMonth.value)}/${date.getFullYear()}`
+  const alreadyUpdated = dataUpdated.some((row) => {
+    const [month, year] = row.dateUpdate.split('/')
+    return (
+      row.location == selectedLocation.value &&
+      selectedMonth.value == month &&
+      date.getFullYear() == year &&
+      row.note == selectedGroup.value
+    )
   })
   if (alreadyUpdated) {
-    showMessageBox(`Dữ liệu đã được cập nhật trong tháng này cho cơ sở ${selectedLocation.value}!`, 'error')
+    showMessageBox(
+      `Dữ liệu đã được cập nhật trong tháng ${selectedFormatted} cho cơ sở ${selectedLocation.value} / ${selectedGroup.value} !`,
+      'error',
+    )
     data.loading = false
     return
   }
@@ -320,6 +380,7 @@ const sendUpdateLesson = async (dataJson) => {
   } else {
     showMessageBox('Cập nhật thất bại', 'error')
   }
+  dataStudentUpdateMonth.value = await fetchDataSheet(DataSheet.studentUpdateMonth)
   data.loading = false
 }
 
@@ -330,6 +391,12 @@ watch([selectedGroup, selectedTeacher, selectedMonth], () => {
     currentPage.value = 1
   })
   // currentPage.value = 1
+})
+
+watch(selectedLocation, (newValue) => {
+  if (newValue) {
+    selectedGroup.value = ''
+  }
 })
 </script>
 <style lang="scss" scoped>
