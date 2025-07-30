@@ -39,16 +39,25 @@
           <template #cell(status)="{ value }">
             <VaBadge :text="value" :color="getColor(value)" class="rounded" />
           </template>
-          <template #cell(actions)="{ row, isExpanded }">
-            <VaButton
-              :icon="isExpanded ? 'do_not_disturb_on' : 'add_circle'"
-              :color="isExpanded ? 'dànger' : 'success'"
-              preset="secondary"
-              size="medium"
-              @click="row.toggleRowDetails()"
-            >
-              <!-- {{ isExpanded ? 'Ẩn' : 'Xem' }} -->
-            </VaButton>
+          <template #cell(actions)="{ row, isExpanded, rowData }">
+            <div class="flex gap-2">
+              <VaButton
+                icon="visibility"
+                color="info"
+                preset="secondary"
+                size="small"
+                title="Xem chi tiết"
+                @click="$router.push(`/students/${rowData.code}`)"
+              />
+              <VaButton
+                :icon="isExpanded ? 'do_not_disturb_on' : 'add_circle'"
+                :color="isExpanded ? 'dànger' : 'success'"
+                preset="secondary"
+                size="small"
+                title="Xem thông tin"
+                @click="row.toggleRowDetails()"
+              />
+            </div>
           </template>
           <template #expandableRow="{ rowData }">
             <div class="gap-2">
@@ -219,7 +228,7 @@ watch(anotherData, (newData) => {
 })
 
 const columns = [
-  { key: 'actions', label: 'Xem' },
+  { key: 'actions', label: 'Thao tác' },
   { key: 'fullname', sortable: true, label: 'Tên' },
   { key: 'group', sortable: true, label: 'Lớp' },
   {

@@ -118,9 +118,18 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { Action, sendRequest } from '../../../stores/data-from-sheet'
 
 const props = defineProps({
-  calendar: Object,
-  students: Array,
-  isUpdate: Boolean,
+  calendar: {
+    type: Object,
+    default: () => ({}),
+  },
+  students: {
+    type: Array,
+    default: () => [],
+  },
+  isUpdate: {
+    type: Boolean,
+    default: false,
+  },
   //   saveButtonLabel: String,
 })
 
