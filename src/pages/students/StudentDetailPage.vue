@@ -1,14 +1,22 @@
 <template>
   <div v-if="student" class="student-detail-page">
     <!-- Header với nút back -->
-    <div class="flex items-center justify-between mb-6">
-      <div class="flex items-center gap-4">
-        <VaButton icon="arrow_back" preset="secondary" class="mb-0" @click="$router.go(-1)"> Quay lại </VaButton>
-        <h1 class="page-title mb-0">Chi tiết học viên</h1>
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+      <div class="flex items-center gap-3">
+        <VaButton icon="arrow_back" preset="secondary" class="mb-0" @click="$router.go(-1)">
+          <span class="hidden sm:inline">Quay lại</span>
+        </VaButton>
+        <h1 class="page-title mb-0 text-lg sm:text-xl">Chi tiết học viên</h1>
       </div>
-      <div class="flex gap-2">
-        <VaButton icon="edit" color="info" @click="showUpdateStudentModal"> Cập nhật </VaButton>
-        <VaButton icon="currency_exchange" color="success" @click="showPayModal"> Đóng học </VaButton>
+      <div class="flex gap-2 w-full sm:w-auto">
+        <VaButton icon="edit" color="info" class="flex-1 sm:flex-none" @click="showUpdateStudentModal">
+          <span class="hidden sm:inline">Cập nhật</span>
+          <span class="sm:hidden">Sửa</span>
+        </VaButton>
+        <VaButton icon="currency_exchange" color="success" class="flex-1 sm:flex-none" @click="showPayModal">
+          <span class="hidden sm:inline">Đóng học</span>
+          <span class="sm:hidden">Thanh toán</span>
+        </VaButton>
       </div>
     </div>
 
@@ -16,63 +24,63 @@
       <template #info="{ student: studentInfo }">
         <!-- Thông tin cá nhân -->
         <VaCard class="mb-6">
-          <VaCardTitle class="flex items-center gap-2">
+          <VaCardTitle class="flex items-center gap-2 text-base sm:text-lg">
             <VaIcon name="person" color="primary" />
             Thông tin cá nhân
           </VaCardTitle>
-          <VaCardContent>
-            <div class="grid md:grid-cols-2 gap-6">
-              <div class="space-y-4">
-                <div class="flex items-center gap-3">
-                  <VaIcon name="badge" color="secondary" size="small" />
-                  <div>
-                    <div class="text-sm text-secondary">Mã học viên</div>
-                    <div class="font-semibold">{{ studentInfo.code }}</div>
+          <VaCardContent class="p-4 sm:p-6">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+              <div class="space-y-3 sm:space-y-4">
+                <div class="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                  <VaIcon name="badge" color="secondary" size="small" class="mt-0.5" />
+                  <div class="flex-1 min-w-0">
+                    <div class="text-xs sm:text-sm text-secondary mb-1">Mã học viên</div>
+                    <div class="font-semibold text-sm sm:text-base break-all">{{ studentInfo.code }}</div>
                   </div>
                 </div>
 
-                <div class="flex items-center gap-3">
-                  <VaIcon name="person" color="secondary" size="small" />
-                  <div>
-                    <div class="text-sm text-secondary">Họ và tên</div>
-                    <div class="font-semibold">{{ studentInfo.fullname }}</div>
+                <div class="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                  <VaIcon name="person" color="secondary" size="small" class="mt-0.5" />
+                  <div class="flex-1 min-w-0">
+                    <div class="text-xs sm:text-sm text-secondary mb-1">Họ và tên</div>
+                    <div class="font-semibold text-sm sm:text-base break-words">{{ studentInfo.fullname }}</div>
                   </div>
                 </div>
 
-                <div class="flex items-center gap-3">
-                  <VaIcon name="face" color="secondary" size="small" />
-                  <div>
-                    <div class="text-sm text-secondary">Biệt danh</div>
-                    <div class="font-semibold">{{ studentInfo.nickname || 'Chưa có' }}</div>
+                <div class="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                  <VaIcon name="face" color="secondary" size="small" class="mt-0.5" />
+                  <div class="flex-1 min-w-0">
+                    <div class="text-xs sm:text-sm text-secondary mb-1">Biệt danh</div>
+                    <div class="font-semibold text-sm sm:text-base">{{ studentInfo.nickname || 'Chưa có' }}</div>
                   </div>
                 </div>
 
-                <div class="flex items-center gap-3">
-                  <VaIcon name="wc" color="secondary" size="small" />
-                  <div>
-                    <div class="text-sm text-secondary">Giới tính</div>
-                    <div class="font-semibold">{{ studentInfo.gender || 'Chưa cập nhật' }}</div>
+                <div class="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                  <VaIcon name="wc" color="secondary" size="small" class="mt-0.5" />
+                  <div class="flex-1 min-w-0">
+                    <div class="text-xs sm:text-sm text-secondary mb-1">Giới tính</div>
+                    <div class="font-semibold text-sm sm:text-base">{{ studentInfo.gender || 'Chưa cập nhật' }}</div>
                   </div>
                 </div>
               </div>
 
-              <div class="space-y-4">
-                <div class="flex items-center gap-3">
-                  <VaIcon name="cake" color="secondary" size="small" />
-                  <div>
-                    <div class="text-sm text-secondary">Ngày sinh</div>
-                    <div class="font-semibold">{{ studentInfo.birthday || 'Chưa cập nhật' }}</div>
+              <div class="space-y-3 sm:space-y-4">
+                <div class="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                  <VaIcon name="cake" color="secondary" size="small" class="mt-0.5" />
+                  <div class="flex-1 min-w-0">
+                    <div class="text-xs sm:text-sm text-secondary mb-1">Ngày sinh</div>
+                    <div class="font-semibold text-sm sm:text-base">{{ studentInfo.birthday || 'Chưa cập nhật' }}</div>
                   </div>
                 </div>
 
-                <div class="flex items-center gap-3">
-                  <VaIcon name="phone" color="secondary" size="small" />
-                  <div>
-                    <div class="text-sm text-secondary">Số điện thoại</div>
-                    <div class="font-semibold">
+                <div class="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                  <VaIcon name="phone" color="secondary" size="small" class="mt-0.5" />
+                  <div class="flex-1 min-w-0">
+                    <div class="text-xs sm:text-sm text-secondary mb-1">Số điện thoại</div>
+                    <div class="font-semibold text-sm sm:text-base">
                       <button
                         v-if="studentInfo.phone"
-                        class="text-primary hover:underline"
+                        class="text-primary hover:underline break-all"
                         @click="callStudent(studentInfo.phone)"
                       >
                         {{ studentInfo.phone }}
@@ -82,19 +90,21 @@
                   </div>
                 </div>
 
-                <div class="flex items-center gap-3">
-                  <VaIcon name="location_on" color="secondary" size="small" />
-                  <div>
-                    <div class="text-sm text-secondary">Cơ sở</div>
-                    <div class="font-semibold">{{ studentInfo.location || 'Chưa cập nhật' }}</div>
+                <div class="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                  <VaIcon name="location_on" color="secondary" size="small" class="mt-0.5" />
+                  <div class="flex-1 min-w-0">
+                    <div class="text-xs sm:text-sm text-secondary mb-1">Cơ sở</div>
+                    <div class="font-semibold text-sm sm:text-base break-words">
+                      {{ studentInfo.location || 'Chưa cập nhật' }}
+                    </div>
                   </div>
                 </div>
 
-                <div class="flex items-center gap-3">
-                  <VaIcon name="event" color="secondary" size="small" />
-                  <div>
-                    <div class="text-sm text-secondary">Ngày bắt đầu</div>
-                    <div class="font-semibold">{{ studentInfo.dateStart || 'Chưa cập nhật' }}</div>
+                <div class="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                  <VaIcon name="event" color="secondary" size="small" class="mt-0.5" />
+                  <div class="flex-1 min-w-0">
+                    <div class="text-xs sm:text-sm text-secondary mb-1">Ngày bắt đầu</div>
+                    <div class="font-semibold text-sm sm:text-base">{{ studentInfo.dateStart || 'Chưa cập nhật' }}</div>
                   </div>
                 </div>
               </div>
@@ -104,44 +114,48 @@
 
         <!-- Thông tin học tập -->
         <VaCard class="mb-6">
-          <VaCardTitle class="flex items-center gap-2">
+          <VaCardTitle class="flex items-center gap-2 text-base sm:text-lg">
             <VaIcon name="school" color="primary" />
             Thông tin học tập
           </VaCardTitle>
-          <VaCardContent>
-            <div class="grid md:grid-cols-2 gap-6">
-              <div class="space-y-4">
-                <div class="flex items-center gap-3">
-                  <VaIcon name="group" color="secondary" size="small" />
-                  <div>
-                    <div class="text-sm text-secondary">Lớp học</div>
-                    <div class="font-semibold">{{ studentInfo.group || 'Chưa phân lớp' }}</div>
+          <VaCardContent class="p-4 sm:p-6">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+              <div class="space-y-3 sm:space-y-4">
+                <div class="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                  <VaIcon name="group" color="secondary" size="small" class="mt-0.5" />
+                  <div class="flex-1 min-w-0">
+                    <div class="text-xs sm:text-sm text-secondary mb-1">Lớp học</div>
+                    <div class="font-semibold text-sm sm:text-base break-words">
+                      {{ studentInfo.group || 'Chưa phân lớp' }}
+                    </div>
                   </div>
                 </div>
 
-                <div class="flex items-center gap-3">
-                  <VaIcon name="schedule" color="secondary" size="small" />
-                  <div>
-                    <div class="text-sm text-secondary">Tổng số buổi</div>
-                    <div class="font-semibold">{{ studentInfo.tongSoBuoi || 0 }} buổi</div>
+                <div class="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                  <VaIcon name="schedule" color="secondary" size="small" class="mt-0.5" />
+                  <div class="flex-1 min-w-0">
+                    <div class="text-xs sm:text-sm text-secondary mb-1">Tổng số buổi</div>
+                    <div class="font-semibold text-sm sm:text-base">{{ studentInfo.tongSoBuoi || 0 }} buổi</div>
                   </div>
                 </div>
 
-                <div class="flex items-center gap-3">
-                  <VaIcon name="check_circle" color="secondary" size="small" />
-                  <div>
-                    <div class="text-sm text-secondary">Buổi đã học</div>
-                    <div class="font-semibold text-success">{{ studentInfo.buoiDaHoc || 0 }} buổi</div>
+                <div class="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                  <VaIcon name="check_circle" color="secondary" size="small" class="mt-0.5" />
+                  <div class="flex-1 min-w-0">
+                    <div class="text-xs sm:text-sm text-secondary mb-1">Buổi đã học</div>
+                    <div class="font-semibold text-sm sm:text-base text-success">
+                      {{ studentInfo.buoiDaHoc || 0 }} buổi
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <div class="space-y-4">
-                <div class="flex items-center gap-3">
-                  <VaIcon name="pending" color="secondary" size="small" />
-                  <div>
-                    <div class="text-sm text-secondary">Buổi còn lại</div>
-                    <div class="font-semibold">
+              <div class="space-y-3 sm:space-y-4">
+                <div class="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                  <VaIcon name="pending" color="secondary" size="small" class="mt-0.5" />
+                  <div class="flex-1 min-w-0">
+                    <div class="text-xs sm:text-sm text-secondary mb-1">Buổi còn lại</div>
+                    <div class="font-semibold text-sm sm:text-base">
                       <VaChip :color="getBuoiConLaiColor(studentInfo.buoiConLai)" size="small">
                         {{ studentInfo.buoiConLai || 0 }} buổi
                       </VaChip>
@@ -149,19 +163,19 @@
                   </div>
                 </div>
 
-                <div class="flex items-center gap-3">
-                  <VaIcon name="payments" color="secondary" size="small" />
-                  <div>
-                    <div class="text-sm text-secondary">Lần đóng tiền</div>
-                    <div class="font-semibold">{{ studentInfo.lanDongTien || 0 }} lần</div>
+                <div class="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                  <VaIcon name="payments" color="secondary" size="small" class="mt-0.5" />
+                  <div class="flex-1 min-w-0">
+                    <div class="text-xs sm:text-sm text-secondary mb-1">Lần đóng tiền</div>
+                    <div class="font-semibold text-sm sm:text-base">{{ studentInfo.lanDongTien || 0 }} lần</div>
                   </div>
                 </div>
 
-                <div class="flex items-center gap-3">
-                  <VaIcon name="info" color="secondary" size="small" />
-                  <div>
-                    <div class="text-sm text-secondary">Trạng thái</div>
-                    <div class="font-semibold">
+                <div class="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                  <VaIcon name="info" color="secondary" size="small" class="mt-0.5" />
+                  <div class="flex-1 min-w-0">
+                    <div class="text-xs sm:text-sm text-secondary mb-1">Trạng thái</div>
+                    <div class="font-semibold text-sm sm:text-base">
                       <VaBadge
                         :text="studentInfo.status || 'Không xác định'"
                         :color="getStatusColor(studentInfo.status)"
@@ -177,12 +191,12 @@
 
         <!-- Ghi chú -->
         <VaCard v-if="studentInfo.notes" class="mb-6">
-          <VaCardTitle class="flex items-center gap-2">
+          <VaCardTitle class="flex items-center gap-2 text-base sm:text-lg">
             <VaIcon name="note" color="primary" />
             Ghi chú
           </VaCardTitle>
-          <VaCardContent>
-            <p class="text-gray-700">{{ studentInfo.notes }}</p>
+          <VaCardContent class="p-4 sm:p-6">
+            <p class="text-gray-700 text-sm sm:text-base leading-relaxed">{{ studentInfo.notes }}</p>
           </VaCardContent>
         </VaCard>
       </template>
@@ -234,15 +248,15 @@
 
   <!-- Loading state -->
   <div v-else-if="loading" class="flex justify-center items-center h-64">
-    <VaProgressCircular indeterminate />
+    <VaProgressCircle indeterminate />
   </div>
 
   <!-- Error state -->
   <div v-else class="flex justify-center items-center h-64">
-    <div class="text-center">
+    <div class="text-center px-4">
       <VaIcon name="error" color="danger" size="large" class="mb-4" />
       <h3 class="text-lg font-semibold text-gray-700 mb-2">Không tìm thấy học viên</h3>
-      <p class="text-gray-500 mb-4">Học viên này có thể đã bị xóa hoặc không tồn tại.</p>
+      <p class="text-gray-500 mb-4 text-sm sm:text-base">Học viên này có thể đã bị xóa hoặc không tồn tại.</p>
       <VaButton @click="$router.go(-1)">Quay lại</VaButton>
     </div>
   </div>
@@ -409,9 +423,40 @@ watch(
 .student-detail-page {
   max-width: 1200px;
   margin: 0 auto;
+  padding: 0 1rem;
+
+  @media (min-width: 640px) {
+    padding: 0 1.5rem;
+  }
+
+  @media (min-width: 1024px) {
+    padding: 0 2rem;
+  }
 }
 
 .page-title {
   margin-bottom: 0;
+}
+
+// Tối ưu cho mobile
+@media (max-width: 640px) {
+  .va-card {
+    margin-bottom: 1rem;
+  }
+
+  .va-card-content {
+    padding: 1rem;
+  }
+
+  .va-button {
+    min-height: 2.5rem;
+  }
+}
+
+// Cải thiện hiển thị trên tablet
+@media (min-width: 641px) and (max-width: 1023px) {
+  .student-detail-page {
+    padding: 0 1rem;
+  }
 }
 </style>

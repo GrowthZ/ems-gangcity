@@ -9,12 +9,13 @@
     <VaCardContent>
       <div>
         <!-- <VaCollapse header="Bộ lọc nâng cao" icon="mso-filter_alt" class="custom-collapse"> -->
-        <div class="grid md:grid-cols-2 xs:grid-cols-2 gap-4 mb-6">
+        <div class="grid md:grid-cols-3 xs:grid-cols-2 gap-4 mb-6">
           <!-- <VaInput v-model="filter" placeholder="Tìm kiếm..." class="w-full">
             <template #prependInner>
               <VaIcon name="search" color="secondary" size="small" />
             </template>
           </VaInput> -->
+          <VaSelect v-model="selectedYear" label="Năm" placeholder="Chọn năm" :options="uniqueYears" value-by="value" />
           <VaSelect
             v-model="selectedMonth"
             label="Tháng"
@@ -85,10 +86,12 @@ const filter = ref('')
 const filterByFields = ref([])
 const date = new Date()
 const month = date.getMonth() + 1
+const year = date.getFullYear()
 const selectedGroup = ref('')
 const selectedTeacher = ref('')
 const selectedSubTeacher = ref('')
 const selectedMonth = ref(month)
+const selectedYear = ref(year)
 const currentPage = ref(1) // Trang hiện tại
 
 const data = useData()
@@ -142,6 +145,36 @@ const uniqueGroups = computed(() => {
 //   return items.value ? uniqueTeachersArray : []
 // })
 
+const uniqueYears = computed(() => {
+  // Tạo danh sách các năm duy nhất từ dữ liệu
+  const years = new Set()
+  items.value.forEach((item) => {
+    if (item?.dateTime) {
+      const itemYear = parseInt(item.dateTime.split('/')[2], 10)
+      if (!isNaN(itemYear)) {
+        years.add(itemYear)
+      }
+    }
+  })
+
+  // Nếu không có dữ liệu, sử dụng năm hiện tại và 2 năm trước
+  if (years.size === 0) {
+    const currentYear = new Date().getFullYear()
+    years.add(currentYear)
+    years.add(currentYear - 1)
+    years.add(currentYear - 2)
+  }
+
+  const uniqueYearsArray = Array.from(years)
+    .sort((a, b) => b - a)
+    .map((year) => ({
+      value: year,
+      text: year.toString(),
+    }))
+  uniqueYearsArray.unshift({ value: '', text: 'Tất cả' })
+  return uniqueYearsArray
+})
+
 const uniqueMonths = computed(() => {
   const months = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
   const uniqueArrayMonth = months.map((month) => ({
@@ -157,6 +190,7 @@ const filteredItems = computed(() => {
     const isGroupSelected = selectedGroup.value !== ''
     const isTeacherSelected = selectedTeacher.value !== ''
     const isMonthSelected = selectedMonth.value !== ''
+    const isYearSelected = selectedYear.value !== ''
 
     if (isGroupSelected && item?.group !== selectedGroup.value) {
       return false
@@ -174,6 +208,15 @@ const filteredItems = computed(() => {
       if (item?.dateTime) {
         const itemMonth = parseInt(item.dateTime.split('/')[1], 10)
         if (itemMonth != parseInt(selectedMonth.value, 10)) {
+          return false
+        }
+      }
+    }
+
+    if (isYearSelected) {
+      if (item?.dateTime) {
+        const itemYear = parseInt(item.dateTime.split('/')[2], 10)
+        if (itemYear != parseInt(selectedYear.value, 10)) {
           return false
         }
       }
@@ -247,7 +290,7 @@ const computedItems = computed(() => {
   }))
 })
 
-watch([selectedGroup, selectedTeacher, selectedMonth], () => {
+watch([selectedGroup, selectedTeacher, selectedMonth, selectedYear], () => {
   console.log('filter changed', computedItems.value)
   data.loading = true
   sleep(100).then(() => {

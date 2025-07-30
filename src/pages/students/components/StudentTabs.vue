@@ -8,16 +8,16 @@
         <VaTab name="adjustments" label="Lịch sử điều chỉnh" icon="swap_vert" />
       </VaTabs>
       <div class="p-6">
-        <template v-if="activeTab === 0">
+        <template v-if="activeTab === 'info'">
           <slot name="info" :student="student" />
         </template>
-        <template v-else-if="activeTab === 1">
+        <template v-else-if="activeTab === 'history'">
           <StudentHistory :student-code="studentCode" />
         </template>
-        <template v-else-if="activeTab === 2">
+        <template v-else-if="activeTab === 'payments'">
           <StudentPayments :student-code="studentCode" />
         </template>
-        <template v-else-if="activeTab === 3">
+        <template v-else-if="activeTab === 'adjustments'">
           <StudentAdjustments :student-code="studentCode" />
         </template>
       </div>
@@ -42,13 +42,13 @@ const props = defineProps({
   },
 })
 
-const activeTab = ref(0)
+const activeTab = ref('info')
 
 // Watch for student code changes to reset tab
 watch(
   () => props.studentCode,
   () => {
-    activeTab.value = 0
+    activeTab.value = 'info'
   },
 )
 </script>
