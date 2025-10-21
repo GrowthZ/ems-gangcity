@@ -4,7 +4,8 @@
 
 **Triệu chứng:** Sidebar thỉnh thoảng bị mất hiển thị sau khi login, logout, refresh trang hoặc localStorage bị clear.
 
-**Nguyên nhân gốc:** 
+**Nguyên nhân gốc:**
+
 1. Đọc trực tiếp từ `localStorage` trong component → không reactive
 2. Không có error handling khi parse JSON
 3. Sidebar chỉ filter routes 1 lần trong `onMounted()` → không tự động update
@@ -24,6 +25,7 @@
 ```
 
 **Lợi ích:**
+
 - ✅ Không crash khi localStorage null/corrupt
 - ✅ Luôn có giá trị hợp lệ
 - ✅ Single source of truth
@@ -41,13 +43,15 @@
 ```
 
 **Lợi ích:**
+
 - ✅ Tự động update khi role thay đổi
 - ✅ Không cần manually refresh
 - ✅ Luôn hiển thị đúng routes
 
 ### 3. **Login/Logout dùng Store Actions**
 
-**Files:** 
+**Files:**
+
 - `src/pages/auth/Login.vue`
 - `src/components/navbar/components/dropdowns/ProfileDropdown.vue`
 
@@ -59,18 +63,19 @@
 ```
 
 **Lợi ích:**
+
 - ✅ Sidebar tự động update qua reactivity
 - ✅ Không cần manually update refs
 - ✅ Consistent behavior
 
 ## 📊 Kết quả
 
-| Trước | Sau |
-|-------|-----|
-| ❌ Sidebar mất thỉnh thoảng | ✅ Luôn hiển thị đúng |
-| ❌ Crash khi localStorage null | ✅ Safe với fallbacks |
-| ❌ Không tự động update | ✅ Auto-update realtime |
-| ❌ localStorage trực tiếp | ✅ Pinia Store centralized |
+| Trước                          | Sau                        |
+| ------------------------------ | -------------------------- |
+| ❌ Sidebar mất thỉnh thoảng    | ✅ Luôn hiển thị đúng      |
+| ❌ Crash khi localStorage null | ✅ Safe với fallbacks      |
+| ❌ Không tự động update        | ✅ Auto-update realtime    |
+| ❌ localStorage trực tiếp      | ✅ Pinia Store centralized |
 
 ## 🔧 Files thay đổi
 
