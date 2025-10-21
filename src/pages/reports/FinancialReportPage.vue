@@ -365,8 +365,23 @@ const deleting = ref(false)
 const selectedPayment = ref(null)
 const editingPayment = ref(null)
 
+// Helper function to get current month date range
+const getCurrentMonthRange = () => {
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = now.getMonth()
+
+  // First day of current month
+  const start = new Date(year, month, 1)
+
+  // Last day of current month
+  const end = new Date(year, month + 1, 0)
+
+  return { start, end }
+}
+
 // Filters
-const dateRange = ref(null)
+const dateRange = ref(getCurrentMonthRange())
 const selectedLocation = ref(null)
 const selectedGroup = ref(null)
 const selectedPaymentType = ref(null)
