@@ -1,0 +1,7 @@
+# Backend files
+backend/node_modules/
+backend/service-account-key.json
+backend/.env
+
+# Keep .env.example
+!backend/.env.example

@@ -75,6 +75,13 @@ export default {
       },
     },
     {
+      name: 'financial-report',
+      displayName: 'menu.financial-report',
+      meta: {
+        icon: 'payments',
+      },
+    },
+    {
       name: 'update-class-month',
       displayName: 'menu.update-class-month',
       meta: {
