@@ -3,6 +3,7 @@
 ## 📋 Tổng Quan
 
 Tính năng **Báo cáo tài chính** hoàn chỉnh với:
+
 - ✅ Frontend đầy đủ (Vue 3 + Vuestic UI)
 - ✅ Backend AppScript (updatePayment, deletePayment)
 - ✅ Format số có dấu phân cách (x.xxx.xxx)
@@ -20,23 +21,26 @@ Tính năng **Báo cáo tài chính** hoàn chỉnh với:
 // Trong actionHandlers object
 var actionHandlers = {
   // ... existing actions
-  'updatePayment': updatePayment,  // ✅ MỚI
-  'deletePayment': deletePayment,  // ✅ MỚI
+  updatePayment: updatePayment, // ✅ MỚI
+  deletePayment: deletePayment, // ✅ MỚI
   // ... other actions
-};
+}
 ```
 
 **Function updatePayment:**
+
 - Tìm row theo `studentCode` + `datePayment`
 - Cập nhật: `type`, `lesson`, `money`, `note`
 - Return: `{status: 'success', message: '...'}`
 
 **Function deletePayment:**
+
 - Tìm row theo `studentCode` + `datePayment`
 - Xóa row khỏi sheet DongHoc
 - Return: `{status: 'success', message: '...'}`
 
 **Cấu trúc tìm kiếm:**
+
 ```javascript
 // Header ở row 3 (index 2)
 const headerRow = 2
@@ -48,8 +52,7 @@ const datePaymentCol = headers.indexOf('datePayment')
 
 // Tìm row cần update/delete
 for (let i = headerRow + 1; i < values.length; i++) {
-  if (values[i][studentCodeCol] === param.studentCode && 
-      values[i][datePaymentCol] === param.datePayment) {
+  if (values[i][studentCodeCol] === param.studentCode && values[i][datePaymentCol] === param.datePayment) {
     rowIndex = i
     break
   }
@@ -81,7 +84,7 @@ const hasActiveFilters = computed(() => {
 // Statistics - Dùng payments.value nếu chưa filter
 const statistics = computed(() => {
   const dataToUse = hasActiveFilters.value ? filteredPayments.value : payments.value
-  
+
   const totalRevenue = dataToUse.reduce((sum, p) => sum + parseFloat(parseMoney(p.money)), 0)
   const totalTransactions = dataToUse.length
   const uniqueStudents = new Set(dataToUse.map((p) => p.studentCode))
@@ -106,20 +109,20 @@ const statistics = computed(() => {
 ```javascript
 const formatMoney = (amount) => {
   if (!amount && amount !== 0) return '0'
-  
+
   const num = parseFloat(parseMoney(amount))
   if (isNaN(num)) return '0'
-  
+
   // Format: 1.000.000
   return num.toLocaleString('vi-VN')
 }
 
 const formatNumber = (num) => {
   if (!num && num !== 0) return '0'
-  
+
   const number = parseInt(num)
   if (isNaN(number)) return '0'
-  
+
   // Format: 1.000
   return number.toLocaleString('vi-VN')
 }
@@ -152,6 +155,7 @@ const formatNumber = (num) => {
 ## 📊 Kết Quả
 
 ### Trước khi fix:
+
 ```
 Tổng doanh thu: 0 VNĐ (khi chưa filter)
 Số giao dịch: 1234 (không có dấu phân cách)
@@ -160,6 +164,7 @@ Số tiền: 2400000 (khó đọc)
 ```
 
 ### Sau khi fix:
+
 ```
 Tổng doanh thu: 125.000.000 VNĐ ✅ (hiển thị đúng)
 Số giao dịch: 1.234 ✅ (có dấu phân cách)
@@ -191,21 +196,21 @@ function testUpdatePayment() {
     type: 'Khoa',
     lesson: 12,
     money: '2400000',
-    note: 'Test update'
-  };
-  
-  const result = updatePayment(JSON.stringify(testData));
-  Logger.log(result);
+    note: 'Test update',
+  }
+
+  const result = updatePayment(JSON.stringify(testData))
+  Logger.log(result)
 }
 
 function testDeletePayment() {
   const testData = {
     studentCode: 'HV001',
-    datePayment: '20/10/2025'
-  };
-  
-  const result = deletePayment(JSON.stringify(testData));
-  Logger.log(result);
+    datePayment: '20/10/2025',
+  }
+
+  const result = deletePayment(JSON.stringify(testData))
+  Logger.log(result)
 }
 ```
 
@@ -227,14 +232,15 @@ netlify deploy --prod
 
 **Expected structure:**
 
-| Row | Column A | Column B | Column C | Column D | ... |
-|-----|----------|----------|----------|----------|-----|
-| 1   | (title)  |          |          |          |     |
-| 2   | (empty)  |          |          |          |     |
-| 3   | studentCode | datePayment | type | lesson | money | note |
-| 4+  | HV001    | 20/10/2025 | Khoa | 12 | 2400000 | ... |
+| Row | Column A    | Column B    | Column C | Column D | ...     |
+| --- | ----------- | ----------- | -------- | -------- | ------- | ---- |
+| 1   | (title)     |             |          |          |         |
+| 2   | (empty)     |             |          |          |         |
+| 3   | studentCode | datePayment | type     | lesson   | money   | note |
+| 4+  | HV001       | 20/10/2025  | Khoa     | 12       | 2400000 | ...  |
 
 **Lưu ý:**
+
 - Header row = Row 3 (index 2)
 - Data starts from Row 4 (index 3)
 - `studentCode` + `datePayment` = unique key
@@ -244,12 +250,14 @@ netlify deploy --prod
 ## 🎨 UI Features
 
 ### 1. Statistics Cards (4 cards)
+
 - **Tổng doanh thu** - Icon: payments, Color: revenue
 - **Số giao dịch** - Icon: receipt, Color: transactions
 - **Học viên đóng tiền** - Icon: people, Color: students
 - **Tổng số buổi** - Icon: event, Color: lessons
 
 ### 2. Filters
+
 - Date range picker (start - end)
 - Location select (dropdown)
 - Group select (dropdown)
@@ -257,6 +265,7 @@ netlify deploy --prod
 - Search input (real-time)
 
 ### 3. Chart (toggleable)
+
 - Type: Dual-axis bar chart
 - X-axis: Tháng/Năm
 - Y-axis left: Doanh thu (VNĐ)
@@ -264,22 +273,26 @@ netlify deploy --prod
 - Toggle button: Show/Hide
 
 ### 4. Distribution (toggleable)
+
 - Progress bars by payment type
 - Shows: Amount, Count, Percentage
 - Toggle button: Show/Hide
 
 ### 5. Data Table
+
 - Sortable columns
 - Pagination (20 per page)
 - Actions: View, Edit, Delete
 - Search: Real-time filter
 
 ### 6. Modals
+
 - **Detail Modal:** View full payment info
 - **Edit Modal:** Update payment (type, lesson, money, note)
 - **Delete Modal:** Confirm before delete
 
 ### 7. Export
+
 - Export to CSV
 - Includes summary row
 - Formatted data
@@ -289,17 +302,20 @@ netlify deploy --prod
 ## 📱 Responsive Design
 
 ### Mobile (< 768px)
+
 - Stats: 1 column
 - Filters: 1 column
 - Table: Horizontal scroll
 - Modals: Full width
 
 ### Tablet (768px - 1024px)
+
 - Stats: 2 columns
 - Filters: 2 columns
 - Table: Normal display
 
 ### Desktop (> 1024px)
+
 - Stats: 4 columns
 - Filters: 4 columns
 - Chart: Full width
@@ -312,6 +328,7 @@ netlify deploy --prod
 ### Issue 1: Tổng doanh thu vẫn = 0
 
 **Check:**
+
 ```javascript
 // In browser console
 console.log('All payments:', payments.value.length)
@@ -324,6 +341,7 @@ console.log('Data to use:', dataToUse.length)
 ### Issue 2: Format số không đúng
 
 **Check:**
+
 ```javascript
 console.log('Format test:', formatNumber(1234567))
 // Expected: "1.234.567"
@@ -334,6 +352,7 @@ console.log('Format test:', formatNumber(1234567))
 ### Issue 3: AppScript 403 Error
 
 **Check:**
+
 - Web App deployment settings
 - Share sheet with "Anyone with link"
 - Enable Google Sheets API
@@ -341,13 +360,15 @@ console.log('Format test:', formatNumber(1234567))
 ### Issue 4: Update/Delete không hoạt động
 
 **Check:**
+
 ```javascript
 // In AppScript logs
 Logger.log('Updating payment:', param.studentCode, param.datePayment)
 Logger.log('Row found at index:', rowIndex)
 ```
 
-**Solution:** 
+**Solution:**
+
 - Verify column names match exactly
 - Check header row = row 3
 - Ensure studentCode + datePayment are strings
@@ -357,6 +378,7 @@ Logger.log('Row found at index:', rowIndex)
 ## ✅ Testing Checklist
 
 ### Frontend
+
 - [ ] Load page successfully
 - [ ] All 4 stats display with formatted numbers
 - [ ] Filters work correctly
@@ -370,6 +392,7 @@ Logger.log('Row found at index:', rowIndex)
 - [ ] Export CSV downloads successfully
 
 ### Backend
+
 - [ ] updatePayment finds correct row
 - [ ] updatePayment updates fields
 - [ ] updatePayment returns success
@@ -380,6 +403,7 @@ Logger.log('Row found at index:', rowIndex)
 - [ ] Logs show in Apps Script
 
 ### Integration
+
 - [ ] Edit action saves to sheet
 - [ ] Delete action removes from sheet
 - [ ] Data reloads after action
@@ -392,6 +416,7 @@ Logger.log('Row found at index:', rowIndex)
 ## 📝 API Endpoints
 
 ### Read (Google Sheets API v4)
+
 ```javascript
 const spreadsheetId = '1HhIpXU6Egq9MZmyCAvPnEjCT8V4n9soD7EY4LQ8Nt0w'
 const range = 'DongHoc!A4:Z'
@@ -400,6 +425,7 @@ fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${r
 ```
 
 ### Write (Apps Script Web App)
+
 ```javascript
 const url = 'YOUR_APPSCRIPT_WEB_APP_URL'
 
@@ -414,9 +440,9 @@ fetch(url, {
       type: 'Khoa',
       lesson: 12,
       money: '2400000',
-      note: 'Updated'
-    }
-  })
+      note: 'Updated',
+    },
+  }),
 })
 
 // Delete
@@ -426,9 +452,9 @@ fetch(url, {
     action: 'deletePayment',
     param: {
       studentCode: 'HV001',
-      datePayment: '20/10/2025'
-    }
-  })
+      datePayment: '20/10/2025',
+    },
+  }),
 })
 ```
 
@@ -444,6 +470,7 @@ fetch(url, {
 ✅ **Documentation** - Đầy đủ hướng dẫn
 
 **Next steps:**
+
 1. Deploy AppScript to production
 2. Test all CRUD operations
 3. Verify number formatting
@@ -455,6 +482,7 @@ fetch(url, {
 ## 📞 Support
 
 Nếu gặp vấn đề, check:
+
 1. Browser console logs
 2. Apps Script execution logs
 3. Network tab (for API errors)

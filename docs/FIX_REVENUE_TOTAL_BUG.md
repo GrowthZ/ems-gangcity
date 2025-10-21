@@ -3,11 +3,13 @@
 ## 🐛 Vấn Đề Phát Hiện
 
 **Hiện tượng:**
+
 ```
 Tổng doanh thu: 5.935.031.509.499.985 VNĐ ❌
 ```
 
 Đây là một số KHỔNG LỒ, hoàn toàn không hợp lý với dữ liệu thực tế:
+
 - 703 giao dịch
 - Mỗi giao dịch ~1.200.000 VNĐ
 - Tổng hợp lý: ~844.000.000 VNĐ (703 × 1.200.000)
@@ -17,44 +19,48 @@ Tổng doanh thu: 5.935.031.509.499.985 VNĐ ❌
 ### 1. Hàm parseMoney() Cũ Xử Lý SAI
 
 **Code cũ có vấn đề:**
+
 ```javascript
 // SAI - Xử lý phức tạp và dễ lỗi
 const parseMoney = (amount) => {
   const amountStr = amount.toString()
-  
+
   // Case 1: Vietnamese format (1.000.000)
   if (amountStr.includes('.') && !amountStr.includes(',')) {
-    return parseFloat(amountStr.replace(/\./g, ''))  // ❌ parseFloat!
+    return parseFloat(amountStr.replace(/\./g, '')) // ❌ parseFloat!
   }
-  
+
   // Case 2: Has comma
   if (amountStr.includes(',')) {
     let cleaned = amountStr.replace(/\./g, '')
     cleaned = cleaned.replace(',', '.')
-    return parseFloat(cleaned)  // ❌ parseFloat!
+    return parseFloat(cleaned) // ❌ parseFloat!
   }
-  
+
   // Case 3: Plain number
-  return parseFloat(amountStr.replace(/[^\d.,]/g, '').replace(',', '.'))  // ❌ phức tạp
+  return parseFloat(amountStr.replace(/[^\d.,]/g, '').replace(',', '.')) // ❌ phức tạp
 }
 ```
 
 **Vấn đề:**
+
 1. Dùng `parseFloat()` → có thể sinh ra số thập phân khi không cần
 2. Logic phức tạp với nhiều case → dễ bỏ sót trường hợp
 3. Không xử lý đúng khi số đã là số nguyên
 4. Có thể bị nhầm lẫn giữa dấu phân cách và dấu thập phân
 
 **Ví dụ lỗi:**
+
 ```javascript
-parseMoney("1.200.000")  // Expected: 1200000, Could be: 1.2 (lỗi!)
-parseMoney("1200000")    // Expected: 1200000, Could be: 12000000 (lỗi!)
-parseMoney("1,200,000")  // Expected: 1200000, Could be: 1.2 (lỗi!)
+parseMoney('1.200.000') // Expected: 1200000, Could be: 1.2 (lỗi!)
+parseMoney('1200000') // Expected: 1200000, Could be: 12000000 (lỗi!)
+parseMoney('1,200,000') // Expected: 1200000, Could be: 1.2 (lỗi!)
 ```
 
 ### 2. Dữ Liệu Sheet Có Thể Có Nhiều Format
 
 Dữ liệu từ Google Sheets có thể có nhiều format:
+
 - `"1.200.000"` (Vietnamese format)
 - `"1200000"` (Plain number)
 - `1200000` (Number type)
@@ -65,6 +71,7 @@ Dữ liệu từ Google Sheets có thể có nhiều format:
 ## ✅ Giải Pháp
 
 ### Nguyên Tắc:
+
 > **"Tiền luôn là số nguyên dương, chỉ giữ chữ số, loại bỏ TẤT CẢ ký tự khác"**
 
 ### Code Mới - Đơn Giản & Chính Xác:
@@ -73,30 +80,29 @@ Dữ liệu từ Google Sheets có thể có nhiều format:
 const parseMoney = (amount) => {
   // 1. Handle null, undefined, empty
   if (!amount && amount !== 0) return 0
-  
+
   // 2. Convert to string
   let amountStr = amount.toString().trim()
   if (!amountStr) return 0
-  
+
   try {
     // 3. QUAN TRỌNG: Chỉ giữ chữ số, loại bỏ TẤT CẢ ký tự khác
     //    Dấu chấm (.), phẩy (,), VND, khoảng trắng... → Bỏ hết!
     const cleanedStr = amountStr.replace(/[^\d]/g, '')
-    
+
     // 4. Nếu không còn số nào
     if (!cleanedStr || cleanedStr === '') return 0
-    
+
     // 5. Parse thành số nguyên (base 10)
     const result = parseInt(cleanedStr, 10)
-    
+
     // 6. Kiểm tra hợp lệ
     if (isNaN(result) || result < 0) {
       console.warn('⚠️ Invalid money value:', amount, '→', cleanedStr, '→', result)
       return 0
     }
-    
+
     return result
-    
   } catch (error) {
     console.error('❌ Parse money error:', error, 'for amount:', amount)
     return 0
@@ -114,17 +120,17 @@ const parseMoney = (amount) => {
 ### Test Cases:
 
 ```javascript
-parseMoney("1.200.000")       // → 1200000 ✅
-parseMoney("1200000")         // → 1200000 ✅
-parseMoney(1200000)           // → 1200000 ✅
-parseMoney("1,200,000")       // → 1200000 ✅
-parseMoney("VND 1.200.000")   // → 1200000 ✅
-parseMoney("1.200.000 VNĐ")   // → 1200000 ✅
-parseMoney("  1.200.000  ")   // → 1200000 ✅
-parseMoney("abc123def")       // → 123 ✅
-parseMoney(null)              // → 0 ✅
-parseMoney("")                // → 0 ✅
-parseMoney("không có")        // → 0 ✅
+parseMoney('1.200.000') // → 1200000 ✅
+parseMoney('1200000') // → 1200000 ✅
+parseMoney(1200000) // → 1200000 ✅
+parseMoney('1,200,000') // → 1200000 ✅
+parseMoney('VND 1.200.000') // → 1200000 ✅
+parseMoney('1.200.000 VNĐ') // → 1200000 ✅
+parseMoney('  1.200.000  ') // → 1200000 ✅
+parseMoney('abc123def') // → 123 ✅
+parseMoney(null) // → 0 ✅
+parseMoney('') // → 0 ✅
+parseMoney('không có') // → 0 ✅
 ```
 
 ## 🔍 Debug Logs Đã Thêm
@@ -141,6 +147,7 @@ payments.value.slice(0, 5).forEach((p, index) => {
 ```
 
 **Expected output:**
+
 ```
 🔍 Checking money parsing (first 5 records):
   [1] Original: "1.200.000" → Parsed: 1.200.000 ✅
@@ -154,6 +161,7 @@ payments.value.slice(0, 5).forEach((p, index) => {
 ## 📊 Kết Quả Mong Đợi
 
 **Trước:**
+
 ```
 Tổng doanh thu: 5.935.031.509.499.985 VNĐ ❌
 Số giao dịch: 703
@@ -161,6 +169,7 @@ Số giao dịch: 703
 ```
 
 **Sau:**
+
 ```
 Tổng doanh thu: ~844.000.000 VNĐ ✅ (ước tính)
 Số giao dịch: 703
@@ -170,16 +179,19 @@ Số giao dịch: 703
 ## 🧪 Testing Steps
 
 ### 1. Mở Console
+
 ```
 F12 → Console tab
 ```
 
 ### 2. Reload Page
+
 ```
 Ctrl+R hoặc F5
 ```
 
 ### 3. Check Logs
+
 ```
 📦 Raw data loaded:
   - Payments: 703
@@ -191,6 +203,7 @@ Ctrl+R hoặc F5
 ```
 
 ### 4. Verify Statistics
+
 ```
 📊 Statistics Debug:
   - Total payments: 703
@@ -201,6 +214,7 @@ Ctrl+R hoặc F5
 ```
 
 ### 5. Check Display
+
 ```
 Tổng doanh thu: XXX.XXX.XXX VNĐ ✅ (không còn con số khổng lồ)
 ```
@@ -210,18 +224,21 @@ Tổng doanh thu: XXX.XXX.XXX VNĐ ✅ (không còn con số khổng lồ)
 Nếu vẫn thấy vấn đề, check:
 
 ### 1. Số quá lớn (> 10 tỷ)
+
 ```
 ⚠️ Có thể data bị duplicate hoặc parse sai
 → Check console logs để xem từng record
 ```
 
 ### 2. Số quá nhỏ (< 100 triệu với 700+ giao dịch)
+
 ```
 ⚠️ Có thể parseMoney bỏ sót data
 → Check warnings về invalid money values
 ```
 
 ### 3. Có warnings trong console
+
 ```
 ⚠️ Invalid money value: ... → ... → ...
 → Check data format trong sheet
@@ -232,22 +249,28 @@ Nếu vẫn thấy vấn đề, check:
 ### Tại sao số lại lớn đến vậy?
 
 **Giả thuyết 1: parseFloat với dấu chấm**
+
 ```javascript
-parseFloat("1.200.000")  // → 1.2 (chỉ lấy đến dấu chấm đầu tiên)
+parseFloat('1.200.000') // → 1.2 (chỉ lấy đến dấu chấm đầu tiên)
 ```
+
 → Nhưng logic cũ replace dots → không phải nguyên nhân
 
 **Giả thuyết 2: Data bị duplicate**
+
 ```javascript
 // Nếu load nhiều lần hoặc append thay vì replace
-payments.value = [...payments.value, ...newData]  // ❌
+payments.value = [...payments.value, ...newData] // ❌
 ```
+
 → Cần check code load data
 
 **Giả thuyết 3: Parse sai format**
+
 ```javascript
 // Nếu số đã là 1200000 nhưng bị parse thành 1200000000000
 ```
+
 → **ĐÂY CÓ VẼ LÀ NGUYÊN NHÂN CHÍNH!**
 
 ### Phân tích số lạ: 5.935.031.509.499.985

@@ -189,7 +189,7 @@
             :current-page="currentPage"
             striped
             hoverable
-            @row-click="handleRowClick"
+            @rowClick="handleRowClick"
           >
             <template #cell(datePayment)="{ rowData }">
               <div class="cell-date">
@@ -223,19 +223,20 @@
               <div class="cell-actions">
                 <VaButton preset="plain" icon="visibility" size="small" @click.stop="viewDetail(rowData)" />
                 <VaButton preset="plain" icon="edit" size="small" color="info" @click.stop="editPayment(rowData)" />
-                <VaButton preset="plain" icon="delete" size="small" color="danger" @click.stop="deletePayment(rowData)" />
+                <VaButton
+                  preset="plain"
+                  icon="delete"
+                  size="small"
+                  color="danger"
+                  @click.stop="deletePayment(rowData)"
+                />
               </div>
             </template>
           </VaDataTable>
 
           <!-- Pagination -->
           <div class="pagination-container">
-            <VaPagination
-              v-model="currentPage"
-              :pages="totalPages"
-              :visible-pages="5"
-              buttons-preset="secondary"
-            />
+            <VaPagination v-model="currentPage" :pages="totalPages" :visible-pages="5" buttons-preset="secondary" />
           </div>
         </VaCardContent>
       </VaCard>
@@ -246,7 +247,7 @@
       <template #header>
         <h3 class="modal-title">Chi tiết giao dịch</h3>
       </template>
-      
+
       <div v-if="selectedPayment" class="detail-modal-content">
         <div class="detail-row">
           <span class="detail-label">Mã học viên:</span>
@@ -298,48 +299,15 @@
       <template #header>
         <h3 class="modal-title">Chỉnh sửa giao dịch</h3>
       </template>
-      
+
       <div v-if="editingPayment" class="edit-modal-content">
-        <VaInput
-          v-model="editingPayment.studentCode"
-          label="Mã học viên"
-          readonly
-          disabled
-        />
-        <VaInput
-          v-model="editingPayment.studentName"
-          label="Tên học viên"
-          readonly
-          disabled
-        />
-        <VaDateInput
-          v-model="editingPayment.datePayment"
-          label="Ngày đóng"
-          required-mark
-        />
-        <VaSelect
-          v-model="editingPayment.type"
-          label="Loại thanh toán"
-          :options="['Le', 'Khoa']"
-          required-mark
-        />
-        <VaInput
-          v-model="editingPayment.lesson"
-          label="Số buổi"
-          type="number"
-          required-mark
-        />
-        <VaInput
-          v-model="editingPayment.money"
-          label="Số tiền"
-          type="text"
-          required-mark
-        />
-        <VaTextarea
-          v-model="editingPayment.note"
-          label="Ghi chú"
-          :max-rows="3"
-        />
+        <VaInput v-model="editingPayment.studentCode" label="Mã học viên" readonly disabled />
+        <VaInput v-model="editingPayment.studentName" label="Tên học viên" readonly disabled />
+        <VaDateInput v-model="editingPayment.datePayment" label="Ngày đóng" required-mark />
+        <VaSelect v-model="editingPayment.type" label="Loại thanh toán" :options="['Le', 'Khoa']" required-mark />
+        <VaInput v-model="editingPayment.lesson" label="Số buổi" type="number" required-mark />
+        <VaInput v-model="editingPayment.money" label="Số tiền" type="text" required-mark />
+        <VaTextarea v-model="editingPayment.note" label="Ghi chú" :max-rows="3" />
       </div>
 
       <template #footer>
@@ -353,7 +321,7 @@
       <template #header>
         <h3 class="modal-title">Xác nhận xóa</h3>
       </template>
-      
+
       <div class="delete-modal-content">
         <VaIcon name="warning" color="danger" size="large" class="warning-icon" />
         <p class="delete-message">Bạn có chắc chắn muốn xóa giao dịch này không?</p>
@@ -477,7 +445,7 @@ const hasActiveFilters = computed(() => {
   const hasGroupFilter = !!(selectedGroup.value && selectedGroup.value !== 'Tất cả')
   const hasTypeFilter = !!(selectedPaymentType.value && selectedPaymentType.value !== 'Tất cả')
   const hasSearchFilter = !!(searchQuery.value && searchQuery.value.trim())
-  
+
   return hasDateFilter || hasLocationFilter || hasGroupFilter || hasTypeFilter || hasSearchFilter
 })
 
@@ -485,35 +453,35 @@ const hasActiveFilters = computed(() => {
 const statistics = computed(() => {
   // Choose data source
   const dataToUse = hasActiveFilters.value ? filteredPayments.value : payments.value
-  
+
   console.log('📊 Statistics Debug:')
   console.log('  - Total payments:', payments.value.length)
   console.log('  - Has active filters:', hasActiveFilters.value)
   console.log('  - Data to use:', dataToUse.length)
-  
+
   // Calculate with error handling
   let totalRevenue = 0
   let totalLessons = 0
-  
+
   dataToUse.forEach((p) => {
     const money = parseMoney(p.money)
     const lesson = parseInt(p.lesson || 0)
-    
+
     if (!isNaN(money)) {
       totalRevenue += money
     } else {
       console.warn('⚠️ Invalid money value:', p.money, 'for student:', p.studentCode)
     }
-    
+
     if (!isNaN(lesson)) {
       totalLessons += lesson
     }
   })
-  
+
   const totalTransactions = dataToUse.length
   const uniqueStudents = new Set(dataToUse.map((p) => p.studentCode).filter(Boolean))
   const totalStudents = uniqueStudents.size
-  
+
   console.log('  - Total revenue:', totalRevenue)
   console.log('  - Total transactions:', totalTransactions)
   console.log('  - Total students:', totalStudents)
@@ -535,11 +503,11 @@ const paymentTypeDistribution = computed(() => {
   filteredPayments.value.forEach((p) => {
     const type = getPaymentTypeLabel(p.type)
     const amount = parseFloat(parseMoney(p.money))
-    
+
     if (!types[type]) {
       types[type] = { amount: 0, count: 0 }
     }
-    
+
     types[type].amount += amount
     types[type].count += 1
     total += amount
@@ -572,10 +540,10 @@ const totalPages = computed(() => Math.ceil(filteredPayments.value.length / perP
 // Helper Functions
 const formatDate = (dateString) => {
   if (!dateString) return 'Chưa có'
-  
+
   try {
     let date
-    
+
     if (dateString.includes('/')) {
       const parts = dateString.split('/')
       date = new Date(parts[2], parts[1] - 1, parts[0])
@@ -584,9 +552,9 @@ const formatDate = (dateString) => {
     } else {
       date = new Date(dateString)
     }
-    
+
     if (isNaN(date.getTime())) return dateString
-    
+
     return date.toLocaleDateString('vi-VN', {
       day: '2-digit',
       month: '2-digit',
@@ -599,7 +567,7 @@ const formatDate = (dateString) => {
 
 const parseDate = (dateString) => {
   if (!dateString) return null
-  
+
   try {
     if (dateString.includes('/')) {
       const parts = dateString.split('/')
@@ -615,20 +583,20 @@ const parseDate = (dateString) => {
 
 const formatMoney = (amount) => {
   if (!amount && amount !== 0) return '0'
-  
+
   const num = parseFloat(parseMoney(amount))
   if (isNaN(num)) return '0'
-  
+
   // Format with thousand separators: 1.000.000
   return num.toLocaleString('vi-VN')
 }
 
 const formatNumber = (num) => {
   if (!num && num !== 0) return '0'
-  
+
   const number = parseInt(num)
   if (isNaN(number)) return '0'
-  
+
   // Format with thousand separators: 1.000.000
   return number.toLocaleString('vi-VN')
 }
@@ -636,32 +604,31 @@ const formatNumber = (num) => {
 const parseMoney = (amount) => {
   // Handle null, undefined, empty string
   if (!amount && amount !== 0) return 0
-  
+
   // Convert to string
-  let amountStr = amount.toString().trim()
-  
+  const amountStr = amount.toString().trim()
+
   // Handle empty string after trim
   if (!amountStr) return 0
-  
+
   try {
     // QUAN TRỌNG: Tiền luôn là số nguyên dương
     // Chỉ giữ lại các CHỮ SỐ, loại bỏ TẤT CẢ ký tự khác (dấu chấm, phấy, chữ, khoảng trắng...)
     const cleanedStr = amountStr.replace(/[^\d]/g, '')
-    
+
     // Nếu không còn số nào sau khi clean
     if (!cleanedStr || cleanedStr === '') return 0
-    
+
     // Parse thành số nguyên
     const result = parseInt(cleanedStr, 10)
-    
+
     // Kiểm tra kết quả hợp lệ
     if (isNaN(result) || result < 0) {
       console.warn('⚠️ Invalid money value after parsing:', amount, '→', cleanedStr, '→', result)
       return 0
     }
-    
+
     return result
-    
   } catch (error) {
     console.error('❌ Parse money error:', error, 'for amount:', amount)
     return 0
@@ -689,26 +656,26 @@ const loadData = async () => {
   loading.value = true
   try {
     console.log('📊 Loading financial report data...')
-    
+
     // Load payment, student, location, group data
     await store.load(DataSheet.payment, [DataSheet.student, DataSheet.location, DataSheet.group])
-    
+
     payments.value = store.allData || []
     students.value = store.allAnotherData[0] || []
     locations.value = store.allAnotherData[1] || []
     groups.value = store.allAnotherData[2] || []
-    
+
     console.log('📦 Raw data loaded:')
     console.log('  - Payments:', payments.value.length)
     console.log('  - Students:', students.value.length)
     console.log('  - Locations:', locations.value.length)
     console.log('  - Groups:', groups.value.length)
-    
+
     // Debug: Check first few payments
     if (payments.value.length > 0) {
       console.log('🔍 Sample payment data:', payments.value.slice(0, 3))
     }
-    
+
     // Merge student names
     payments.value = payments.value.map((p) => {
       const student = students.value.find((s) => s.code === p.studentCode)
@@ -719,9 +686,9 @@ const loadData = async () => {
         group: p.group || student?.group || '',
       }
     })
-    
+
     console.log('✅ Loaded and merged payments:', payments.value.length)
-    
+
     // Debug: Check money values and parsing
     console.log('🔍 Checking money parsing (first 5 records):')
     payments.value.slice(0, 5).forEach((p, index) => {
@@ -729,14 +696,14 @@ const loadData = async () => {
       const parsedMoney = parseMoney(p.money)
       console.log(`  [${index + 1}] Original: "${originalMoney}" → Parsed: ${parsedMoney.toLocaleString('vi-VN')}`)
     })
-    
+
     // Debug: Calculate initial total
     const initialTotal = payments.value.reduce((sum, p) => {
       const money = parseMoney(p.money)
       return sum + (isNaN(money) ? 0 : money)
     }, 0)
     console.log('💰 Initial total revenue:', initialTotal.toLocaleString('vi-VN'), 'VNĐ')
-    
+
     // Create chart after data loaded
     createRevenueChart()
   } catch (error) {
@@ -748,29 +715,29 @@ const loadData = async () => {
 
 const createRevenueChart = () => {
   if (!revenueChart.value) return
-  
+
   // Destroy existing chart
   if (chartInstance) {
     chartInstance.destroy()
   }
-  
+
   // Group by month
   const monthlyData = {}
-  
+
   filteredPayments.value.forEach((p) => {
     const date = parseDate(p.datePayment)
     if (!date) return
-    
+
     const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
-    
+
     if (!monthlyData[monthKey]) {
       monthlyData[monthKey] = { revenue: 0, count: 0 }
     }
-    
+
     monthlyData[monthKey].revenue += parseFloat(parseMoney(p.money))
     monthlyData[monthKey].count += 1
   })
-  
+
   const sortedMonths = Object.keys(monthlyData).sort()
   const labels = sortedMonths.map((m) => {
     const [year, month] = m.split('-')
@@ -778,7 +745,7 @@ const createRevenueChart = () => {
   })
   const revenueData = sortedMonths.map((m) => monthlyData[m].revenue)
   const countData = sortedMonths.map((m) => monthlyData[m].count)
-  
+
   const ctx = revenueChart.value.getContext('2d')
   chartInstance = new Chart(ctx, {
     type: 'bar',
@@ -846,7 +813,7 @@ const editPayment = (payment) => {
   console.log('Edit payment:', payment)
   selectedPayment.value = payment
   editingPayment.value = { ...payment }
-  
+
   // Convert date to Date object if needed
   if (editingPayment.value.datePayment) {
     const dateStr = editingPayment.value.datePayment
@@ -855,7 +822,7 @@ const editPayment = (payment) => {
       editingPayment.value.datePayment = new Date(parts[2], parts[1] - 1, parts[0])
     }
   }
-  
+
   showEditModal.value = true
 }
 
@@ -866,11 +833,11 @@ const cancelEdit = () => {
 
 const savePayment = async () => {
   if (!editingPayment.value) return
-  
+
   saving.value = true
   try {
     console.log('💾 Saving payment:', editingPayment.value)
-    
+
     // Format date back to DD/MM/YYYY
     let formattedDate = editingPayment.value.datePayment
     if (formattedDate instanceof Date) {
@@ -879,22 +846,22 @@ const savePayment = async () => {
       const year = formattedDate.getFullYear()
       formattedDate = `${day}/${month}/${year}`
     }
-    
+
     const paymentData = {
       ...editingPayment.value,
       datePayment: formattedDate,
       // Ensure money is in correct format
       money: parseMoney(editingPayment.value.money).toString(),
     }
-    
+
     // Call AppScript to update payment
     const result = await sendRequest(Action.updatePayment, paymentData)
-    
+
     if (result.status === 'success') {
       showMessageBox('Cập nhật giao dịch thành công!', 'success')
       showEditModal.value = false
       editingPayment.value = null
-      
+
       // Reload data
       await loadData()
     } else {
@@ -916,22 +883,22 @@ const deletePayment = (payment) => {
 
 const confirmDelete = async () => {
   if (!selectedPayment.value) return
-  
+
   deleting.value = true
   try {
     console.log('🗑️ Deleting payment:', selectedPayment.value)
-    
+
     // Call AppScript to delete payment
     const result = await sendRequest(Action.deletePayment, {
       studentCode: selectedPayment.value.studentCode,
       datePayment: selectedPayment.value.datePayment,
     })
-    
+
     if (result.status === 'success') {
       showMessageBox('Xóa giao dịch thành công!', 'success')
       showDeleteModal.value = false
       selectedPayment.value = null
-      
+
       // Reload data
       await loadData()
     } else {
@@ -947,41 +914,41 @@ const confirmDelete = async () => {
 
 const exportToExcel = () => {
   console.log('📥 Export to Excel')
-  
+
   try {
     // Prepare data for export
     const exportData = filteredPayments.value.map((p) => ({
       'Ngày đóng': formatDate(p.datePayment),
       'Mã học viên': p.studentCode,
       'Tên học viên': p.studentName || p.fullname || '',
-      'Lớp': p.group || '',
-      'Loại': getPaymentTypeLabel(p.type),
+      Lớp: p.group || '',
+      Loại: getPaymentTypeLabel(p.type),
       'Số buổi': p.lesson,
       'Số tiền': formatMoney(p.money),
       'Ghi chú': p.note || '',
       'Cơ sở': p.location || '',
     }))
-    
+
     // Add summary row
     exportData.push({})
     exportData.push({
       'Ngày đóng': 'TỔNG CỘNG',
       'Mã học viên': '',
       'Tên học viên': '',
-      'Lớp': '',
-      'Loại': '',
+      Lớp: '',
+      Loại: '',
       'Số buổi': statistics.value.totalLessons,
       'Số tiền': formatMoney(statistics.value.totalRevenue),
       'Ghi chú': `${statistics.value.totalTransactions} giao dịch`,
       'Cơ sở': '',
     })
-    
+
     // Convert to CSV and download
     const csv = toCSV(exportData)
     const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
     const link = document.createElement('a')
     const url = URL.createObjectURL(blob)
-    
+
     const filename = `BaoCaoTaiChinh_${new Date().toISOString().slice(0, 10)}.csv`
     link.setAttribute('href', url)
     link.setAttribute('download', filename)
@@ -989,7 +956,7 @@ const exportToExcel = () => {
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
-    
+
     showMessageBox('Xuất Excel thành công!', 'success')
   } catch (error) {
     console.error('❌ Error exporting:', error)
@@ -1013,7 +980,7 @@ onMounted(() => {
 <style lang="scss" scoped>
 .financial-report-page {
   padding: 1rem;
-  
+
   @media (min-width: 768px) {
     padding: 1.5rem;
   }
@@ -1025,7 +992,7 @@ onMounted(() => {
   align-items: flex-start;
   margin-bottom: 1.5rem;
   gap: 1rem;
-  
+
   @media (max-width: 768px) {
     flex-direction: column;
   }
@@ -1040,7 +1007,7 @@ onMounted(() => {
   font-weight: 700;
   color: var(--va-text-primary);
   margin: 0 0 0.5rem 0;
-  
+
   @media (min-width: 768px) {
     font-size: 1.75rem;
   }
@@ -1055,10 +1022,10 @@ onMounted(() => {
 .header-actions {
   display: flex;
   gap: 0.75rem;
-  
+
   @media (max-width: 768px) {
     width: 100%;
-    
+
     .va-button {
       flex: 1;
     }
@@ -1073,11 +1040,11 @@ onMounted(() => {
   display: grid;
   grid-template-columns: 1fr;
   gap: 1rem;
-  
+
   @media (min-width: 640px) {
     grid-template-columns: repeat(2, 1fr);
   }
-  
+
   @media (min-width: 1024px) {
     grid-template-columns: repeat(4, 1fr);
   }
@@ -1102,11 +1069,11 @@ onMounted(() => {
   display: grid;
   grid-template-columns: 1fr;
   gap: 1rem;
-  
+
   @media (min-width: 640px) {
     grid-template-columns: repeat(2, 1fr);
   }
-  
+
   @media (min-width: 1024px) {
     grid-template-columns: repeat(4, 1fr);
   }
@@ -1119,28 +1086,28 @@ onMounted(() => {
       color: var(--va-success);
     }
   }
-  
+
   &.transactions {
     .stat-icon {
       background: linear-gradient(135deg, rgba(var(--va-primary-rgb), 0.2), rgba(var(--va-primary-rgb), 0.05));
       color: var(--va-primary);
     }
   }
-  
+
   &.students {
     .stat-icon {
       background: linear-gradient(135deg, rgba(var(--va-info-rgb), 0.2), rgba(var(--va-info-rgb), 0.05));
       color: var(--va-info);
     }
   }
-  
+
   &.lessons {
     .stat-icon {
       background: linear-gradient(135deg, rgba(var(--va-warning-rgb), 0.2), rgba(var(--va-warning-rgb), 0.05));
       color: var(--va-warning);
     }
   }
-  
+
   .va-card__content {
     display: flex;
     gap: 1rem;
@@ -1188,7 +1155,7 @@ onMounted(() => {
 
 .chart-container {
   height: 300px;
-  
+
   @media (min-width: 768px) {
     height: 400px;
   }
@@ -1303,10 +1270,10 @@ onMounted(() => {
   gap: 1rem;
   justify-content: center;
   margin: 1rem 0;
-  
+
   @media (max-width: 640px) {
     flex-direction: column;
-    
+
     .va-button {
       width: 100%;
     }
@@ -1336,7 +1303,7 @@ onMounted(() => {
   background-color: var(--va-background-element);
   border-radius: 0.375rem;
   gap: 1rem;
-  
+
   @media (max-width: 640px) {
     flex-direction: column;
     align-items: flex-start;
@@ -1352,13 +1319,13 @@ onMounted(() => {
 .detail-value {
   color: var(--va-text-primary);
   text-align: right;
-  
+
   &.amount {
     font-size: 1.125rem;
     font-weight: 700;
     color: var(--va-success);
   }
-  
+
   @media (max-width: 640px) {
     text-align: left;
   }
@@ -1396,19 +1363,19 @@ onMounted(() => {
   border-radius: 0.5rem;
   width: 100%;
   text-align: left;
-  
+
   p {
     margin: 0.5rem 0;
-    
+
     &:first-child {
       margin-top: 0;
     }
-    
+
     &:last-child {
       margin-bottom: 0;
     }
   }
-  
+
   strong {
     color: var(--va-text-secondary);
   }

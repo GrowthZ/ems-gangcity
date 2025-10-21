@@ -5,6 +5,7 @@
 ### 1. **Thứ Tự Định Nghĩa Computed Properties** ❌→✅
 
 **Vấn đề:**
+
 ```javascript
 // SAI: statistics sử dụng hasActiveFilters TRƯỚC KHI nó được định nghĩa
 const statistics = computed(() => {
@@ -15,6 +16,7 @@ const hasActiveFilters = computed(() => { ... })  // ❌ Định nghĩa SAU
 ```
 
 **Giải pháp:**
+
 ```javascript
 // ĐÚNG: hasActiveFilters phải được định nghĩa TRƯỚC
 const hasActiveFilters = computed(() => { ... })  // ✅ Định nghĩa TRƯỚC
@@ -29,6 +31,7 @@ const statistics = computed(() => {
 ### 2. **Logic hasActiveFilters Không Chính Xác** ❌→✅
 
 **Vấn đề:**
+
 ```javascript
 // SAI: Coi "Tất cả" và null đều là filter active
 const hasActiveFilters = computed(() => {
@@ -43,6 +46,7 @@ const hasActiveFilters = computed(() => {
 **Kết quả:** Khi chọn "Tất cả", hasActiveFilters = true → dùng filteredPayments (rỗng) thay vì payments.value
 
 **Giải pháp:**
+
 ```javascript
 // ĐÚNG: Loại trừ "Tất cả" khỏi kiểm tra
 const hasActiveFilters = computed(() => {
@@ -51,7 +55,7 @@ const hasActiveFilters = computed(() => {
   const hasGroupFilter = !!(selectedGroup.value && selectedGroup.value !== 'Tất cả')
   const hasTypeFilter = !!(selectedPaymentType.value && selectedPaymentType.value !== 'Tất cả')
   const hasSearchFilter = !!(searchQuery.value && searchQuery.value.trim())
-  
+
   return hasDateFilter || hasLocationFilter || hasGroupFilter || hasTypeFilter || hasSearchFilter
 })
 ```
@@ -61,57 +65,58 @@ const hasActiveFilters = computed(() => {
 ### 3. **parseMoney Function Không Xử Lý Edge Cases** ❌→✅
 
 **Vấn đề:**
+
 ```javascript
 // SAI: Không xử lý null, undefined, string rỗng
 const parseMoney = (amount) => {
-  if (!amount) return 0  // ❌ Còn thiếu nhiều cases
-  
-  const amountStr = amount.toString()  // ❌ Nếu amount = null → crash
-  
+  if (!amount) return 0 // ❌ Còn thiếu nhiều cases
+
+  const amountStr = amount.toString() // ❌ Nếu amount = null → crash
+
   if (amountStr.includes('.')) {
-    return parseFloat(amountStr.replace(/\./g, ''))  // ❌ Có thể return NaN
+    return parseFloat(amountStr.replace(/\./g, '')) // ❌ Có thể return NaN
   }
-  
-  return parseFloat(amountStr.replace(/[^\d.,]/g, '').replace(',', '.'))  // ❌ Có thể return NaN
+
+  return parseFloat(amountStr.replace(/[^\d.,]/g, '').replace(',', '.')) // ❌ Có thể return NaN
 }
 ```
 
 **Giải pháp:**
+
 ```javascript
 // ĐÚNG: Xử lý tất cả edge cases
 const parseMoney = (amount) => {
   // Handle null, undefined, empty string
   if (!amount && amount !== 0) return 0
-  
+
   // Convert to string safely
   const amountStr = amount.toString().trim()
-  
+
   // Handle empty string after trim
   if (!amountStr) return 0
-  
+
   try {
     // Case 1: Vietnamese format (1.000.000)
     if (amountStr.includes('.') && !amountStr.includes(',')) {
       const cleaned = amountStr.replace(/\./g, '')
       const result = parseFloat(cleaned)
-      return isNaN(result) ? 0 : result  // ✅ Check NaN
+      return isNaN(result) ? 0 : result // ✅ Check NaN
     }
-    
+
     // Case 2: Has comma (1.000,50 or 1,000)
     if (amountStr.includes(',')) {
       let cleaned = amountStr.replace(/\./g, '')
       cleaned = cleaned.replace(',', '.')
       const result = parseFloat(cleaned)
-      return isNaN(result) ? 0 : result  // ✅ Check NaN
+      return isNaN(result) ? 0 : result // ✅ Check NaN
     }
-    
+
     // Case 3: Plain number
     const result = parseFloat(amountStr)
-    return isNaN(result) ? 0 : result  // ✅ Check NaN
-    
+    return isNaN(result) ? 0 : result // ✅ Check NaN
   } catch (error) {
     console.error('❌ Parse money error:', error, 'for amount:', amount)
-    return 0  // ✅ Safe fallback
+    return 0 // ✅ Safe fallback
   }
 }
 ```
@@ -121,14 +126,16 @@ const parseMoney = (amount) => {
 ### 4. **Statistics Calculation Không Safe** ❌→✅
 
 **Vấn đề:**
+
 ```javascript
 // SAI: reduce có thể trả về NaN
 const totalRevenue = dataToUse.reduce((sum, p) => {
-  return sum + parseFloat(parseMoney(p.money))  // ❌ parseFloat(NaN) = NaN
+  return sum + parseFloat(parseMoney(p.money)) // ❌ parseFloat(NaN) = NaN
 }, 0)
 ```
 
 **Giải pháp:**
+
 ```javascript
 // ĐÚNG: Kiểm tra từng giá trị
 let totalRevenue = 0
@@ -137,13 +144,13 @@ let totalLessons = 0
 dataToUse.forEach((p) => {
   const money = parseMoney(p.money)
   const lesson = parseInt(p.lesson || 0)
-  
+
   if (!isNaN(money)) {
     totalRevenue += money
   } else {
     console.warn('⚠️ Invalid money value:', p.money, 'for student:', p.studentCode)
   }
-  
+
   if (!isNaN(lesson)) {
     totalLessons += lesson
   }
@@ -155,6 +162,7 @@ dataToUse.forEach((p) => {
 ## 🔍 Debug Logs Đã Thêm
 
 ### 1. Load Data Logs
+
 ```javascript
 console.log('📦 Raw data loaded:')
 console.log('  - Payments:', payments.value.length)
@@ -166,6 +174,7 @@ console.log('💰 Initial total revenue:', initialTotal.toLocaleString('vi-VN'),
 ```
 
 ### 2. Statistics Calculation Logs
+
 ```javascript
 console.log('📊 Statistics Debug:')
 console.log('  - Total payments:', payments.value.length)
@@ -178,6 +187,7 @@ console.log('  - Total lessons:', totalLessons)
 ```
 
 ### 3. Parse Money Error Logs
+
 ```javascript
 console.error('❌ Parse money error:', error, 'for amount:', amount)
 console.warn('⚠️ Invalid money value:', p.money, 'for student:', p.studentCode)
@@ -188,7 +198,9 @@ console.warn('⚠️ Invalid money value:', p.money, 'for student:', p.studentCo
 ## 🧪 Testing Scenarios
 
 ### Test 1: Load Page (Không Filter)
+
 **Expected:**
+
 ```
 📊 Statistics Debug:
   - Total payments: 150
@@ -198,6 +210,7 @@ console.warn('⚠️ Invalid money value:', p.money, 'for student:', p.studentCo
 ```
 
 **If fails:**
+
 - Check: hasActiveFilters should be `false`
 - Check: dataToUse.length should equal payments.value.length
 - Check: No invalid money values in warnings
@@ -205,7 +218,9 @@ console.warn('⚠️ Invalid money value:', p.money, 'for student:', p.studentCo
 ---
 
 ### Test 2: Select "Tất cả" (All Options)
+
 **Expected:**
+
 ```
 📊 Statistics Debug:
   - Has active filters: false  ✅ "Tất cả" không phải filter
@@ -213,12 +228,15 @@ console.warn('⚠️ Invalid money value:', p.money, 'for student:', p.studentCo
 ```
 
 **If fails:**
+
 - Check: hasActiveFilters logic excludes 'Tất cả'
 
 ---
 
 ### Test 3: Select Specific Location
+
 **Expected:**
+
 ```
 📊 Statistics Debug:
   - Has active filters: true  ✅ Có filter cụ thể
@@ -228,7 +246,9 @@ console.warn('⚠️ Invalid money value:', p.money, 'for student:', p.studentCo
 ---
 
 ### Test 4: Clear All Filters
+
 **Expected:**
+
 ```
 📊 Statistics Debug:
   - Has active filters: false  ✅ Không còn filter
@@ -242,33 +262,41 @@ console.warn('⚠️ Invalid money value:', p.money, 'for student:', p.studentCo
 ### Issue: Tổng doanh thu = 0
 
 **Check 1: Data loaded?**
+
 ```javascript
 // In console
-payments.value.length  // Should be > 0
+payments.value.length // Should be > 0
 ```
+
 → If 0: Check API, check DataSheet.payment
 
 **Check 2: hasActiveFilters correct?**
+
 ```javascript
 // In console
-hasActiveFilters.value  // Should be false when no filters
+hasActiveFilters.value // Should be false when no filters
 ```
+
 → If true: Check filter values, should all be null or "Tất cả"
 
 **Check 3: parseMoney working?**
+
 ```javascript
 // In console
-parseMoney('2.400.000')  // Should return 2400000
-parseMoney('2400000')    // Should return 2400000
-parseMoney(null)         // Should return 0
+parseMoney('2.400.000') // Should return 2400000
+parseMoney('2400000') // Should return 2400000
+parseMoney(null) // Should return 0
 ```
+
 → If NaN: Check parseMoney logic
 
 **Check 4: Statistics calculation?**
+
 ```javascript
 // Check warnings in console
 // Should see: "⚠️ Invalid money value: ..." if data is bad
 ```
+
 → If many warnings: Check sheet data format
 
 ---
@@ -280,10 +308,11 @@ parseMoney(null)         // Should return 0
 **Fix:** Already fixed! hasActiveFilters now excludes "Tất cả"
 
 **Verify:**
+
 ```javascript
 // Test in console
 selectedLocation.value = 'Tất cả'
-hasActiveFilters.value  // Should be false ✅
+hasActiveFilters.value // Should be false ✅
 ```
 
 ---
@@ -295,29 +324,31 @@ hasActiveFilters.value  // Should be false ✅
 **Fix:** Already fixed! parseMoney returns 0 on error, formatMoney checks isNaN
 
 **Verify:**
+
 ```javascript
 // Test in console
-formatMoney(NaN)      // Should return '0' ✅
-formatNumber(NaN)     // Should return '0' ✅
+formatMoney(NaN) // Should return '0' ✅
+formatNumber(NaN) // Should return '0' ✅
 ```
 
 ---
 
 ## 🎯 Key Changes Summary
 
-| Issue | Before | After | Impact |
-|-------|--------|-------|--------|
-| Computed order | statistics → hasActiveFilters | hasActiveFilters → statistics | ✅ Fixed dependency |
-| hasActiveFilters | Always true with "Tất cả" | Excludes "Tất cả" | ✅ Fixed logic |
-| parseMoney | Can return NaN | Always returns number | ✅ Safe calculation |
-| statistics calc | reduce with parseFloat | forEach with isNaN check | ✅ Error handling |
-| Debug logs | Minimal | Comprehensive | ✅ Easy debugging |
+| Issue            | Before                        | After                         | Impact              |
+| ---------------- | ----------------------------- | ----------------------------- | ------------------- |
+| Computed order   | statistics → hasActiveFilters | hasActiveFilters → statistics | ✅ Fixed dependency |
+| hasActiveFilters | Always true with "Tất cả"     | Excludes "Tất cả"             | ✅ Fixed logic      |
+| parseMoney       | Can return NaN                | Always returns number         | ✅ Safe calculation |
+| statistics calc  | reduce with parseFloat        | forEach with isNaN check      | ✅ Error handling   |
+| Debug logs       | Minimal                       | Comprehensive                 | ✅ Easy debugging   |
 
 ---
 
 ## ✅ Final Verification
 
 **Steps:**
+
 1. Open page → Check console logs
 2. Verify initial total revenue displays correctly
 3. Select "Tất cả" for all filters → Total should not change
@@ -326,6 +357,7 @@ formatNumber(NaN)     // Should return '0' ✅
 6. Check no warnings about invalid money values
 
 **Expected console output:**
+
 ```
 📊 Loading financial report data...
 📦 Raw data loaded:
@@ -367,20 +399,24 @@ formatNumber(NaN)     // Should return '0' ✅
 ## 📝 Notes for Production
 
 **Debug logs:**
+
 - Keep for now to help diagnose issues
 - Can be removed later or wrapped in `if (process.env.NODE_ENV === 'development')`
 
 **Performance:**
+
 - Current implementation is efficient
 - Computed properties cache results
 - Only recalculates when dependencies change
 
 **Data validation:**
+
 - parseMoney now handles all edge cases
 - Statistics calculation is safe
 - No more NaN or undefined in display
 
 **Maintainability:**
+
 - Code is well-documented with comments
 - Debug logs make troubleshooting easy
 - Clear separation of concerns

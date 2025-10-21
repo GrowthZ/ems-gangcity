@@ -19,7 +19,9 @@
           <div class="history-icon">
             <VaIcon
               :name="item.source === 'attendance' ? 'event' : 'check_circle'"
-              :color="getAttendanceColor(item.status || item.attendance || item.groupAttendace || item.attendanceStatus)"
+              :color="
+                getAttendanceColor(item.status || item.attendance || item.groupAttendace || item.attendanceStatus)
+              "
               size="small"
             />
           </div>
@@ -89,11 +91,11 @@ const history = ref([])
 // Helper function to format date
 const formatDate = (dateString) => {
   if (!dateString) return 'Chưa có ngày'
-  
+
   try {
     // Try different date formats
     let date
-    
+
     // Format: DD/MM/YYYY
     if (dateString.includes('/')) {
       const parts = dateString.split('/')
@@ -101,7 +103,7 @@ const formatDate = (dateString) => {
         // Assuming DD/MM/YYYY
         date = new Date(parts[2], parts[1] - 1, parts[0])
       }
-    } 
+    }
     // Format: YYYY-MM-DD or ISO
     else if (dateString.includes('-')) {
       date = new Date(dateString)
@@ -114,13 +116,13 @@ const formatDate = (dateString) => {
     else {
       date = new Date(dateString)
     }
-    
+
     // Check if date is valid
     if (isNaN(date.getTime())) {
       console.warn('⚠️ Invalid date:', dateString)
       return dateString
     }
-    
+
     return date.toLocaleDateString('vi-VN', {
       weekday: 'short',
       day: '2-digit',
@@ -184,15 +186,15 @@ const loadHistory = async () => {
   loading.value = true
   try {
     console.log('📖 Loading history for student:', props.studentCode)
-    
+
     // Load both attendance detail and main attendance data
     await store.load(DataSheet.attendaceDetail, [DataSheet.attendance])
     const attendanceDetailRecords = store.allData || []
     const attendanceRecords = store.allAnotherData[0] || []
-    
+
     console.log('📊 Total attendance detail records:', attendanceDetailRecords.length)
     console.log('📊 Total attendance records:', attendanceRecords.length)
-    
+
     // Log sample records to see structure
     if (attendanceDetailRecords.length > 0) {
       console.log('📝 Sample attendance detail record:', attendanceDetailRecords[0])
@@ -208,10 +210,8 @@ const loadHistory = async () => {
         const itemCode = (item.code || '').toLowerCase()
         const itemStudentCode = (item.studentCode || '').toLowerCase()
         const itemStudent = (item.student || '').toLowerCase()
-        
-        return itemCode === studentCodeLower || 
-               itemStudentCode === studentCodeLower || 
-               itemStudent === studentCodeLower
+
+        return itemCode === studentCodeLower || itemStudentCode === studentCodeLower || itemStudent === studentCodeLower
       })
       .map((item) => {
         // Find matching attendance record to get teacher info
@@ -220,10 +220,10 @@ const loadHistory = async () => {
           const itemDate = item.dateTime || item.date
           const attGroup = (att.group || '').toLowerCase()
           const itemGroupAttendance = (item.groupAttendace || item.groupAttendance || '').toLowerCase()
-          
+
           return attDate === itemDate && attGroup === itemGroupAttendance
         })
-        
+
         // Merge data
         return {
           ...item,
@@ -238,7 +238,7 @@ const loadHistory = async () => {
       })
 
     console.log('✅ Filtered history records:', filteredHistory.length)
-    
+
     // Log filtered data to debug
     if (filteredHistory.length > 0) {
       console.log('📋 First filtered record:', filteredHistory[0])
@@ -461,7 +461,7 @@ watch(
 
   &.sub {
     color: var(--va-text-secondary);
-    
+
     .va-icon {
       color: var(--va-info);
     }

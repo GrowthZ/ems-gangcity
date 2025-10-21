@@ -12,11 +12,13 @@
 ## 🔧 Setup Environment Variables
 
 ### Option 1: Automated Script (RECOMMENDED)
+
 ```bash
 ./setup-netlify-env.sh
 ```
 
 **Checklist:**
+
 - [ ] Script chạy thành công
 - [ ] Đã login vào Netlify
 - [ ] Site đã được link
@@ -34,14 +36,17 @@
 **Variables to add:**
 
 - [ ] **VITE_GOOGLE_SHEETS_API_KEY**
+
   - Value: `AIzaSyC9NlfiP4qs-Hfaej4RpmxxWXRcAoKM7ao`
   - Scope: All deploys ✓
 
 - [ ] **VITE_GOOGLE_SHEET_ID**
+
   - Value: `1HhIpXU6Egq9MZmyCAvPnEjCT8V4n9soD7EY4LQ8Nt0w`
   - Scope: All deploys ✓
 
 - [ ] **VITE_APPS_SCRIPT_URL**
+
   - Value: `https://script.google.com/macros/s/AKfycbwYzdx-Bswcg5OxvIg7uFD0ki3dRg6MI_z_BfGtHaRkLelqW4bjOFOsLEJVZxdjh6Rs/exec`
   - Scope: All deploys ✓
 
@@ -54,6 +59,7 @@
 ## 🚀 Deployment
 
 ### Deploy Commands
+
 ```bash
 # Deploy to production
 netlify deploy --prod
@@ -63,6 +69,7 @@ git push origin main
 ```
 
 **Checklist:**
+
 - [ ] Build started
 - [ ] Build logs show env vars: "VITE_GOOGLE_SHEETS_API_KEY: defined"
 - [ ] Build succeeded
@@ -74,11 +81,13 @@ git push origin main
 ## ✅ Post-Deployment Verification
 
 ### 1. Check Build Logs
+
 - [ ] No warnings about missing env vars
 - [ ] Build completed successfully
 - [ ] Assets optimized and generated
 
 ### 2. Test Production Site
+
 - [ ] Site loads without errors
 - [ ] Open browser console (F12)
 - [ ] No errors about:
@@ -87,7 +96,9 @@ git push origin main
   - `import.meta.env.VITE_APPS_SCRIPT_URL is undefined`
 
 ### 3. Test Functionality
+
 - [ ] **Read Operations:**
+
   - [ ] Can load student list
   - [ ] Can load attendance records
   - [ ] Can load payment records
@@ -101,6 +112,7 @@ git push origin main
   - [ ] Can delete records (Financial Report)
 
 ### 4. Test Different Pages
+
 - [ ] Dashboard loads
 - [ ] Student page loads with data
 - [ ] Attendance page works
@@ -113,6 +125,7 @@ git push origin main
 ## 🔒 Security Checklist
 
 ### Google Cloud Console
+
 - [ ] API key restrictions configured:
   - [ ] Application restrictions: HTTP referrers
   - [ ] Added: `https://your-site.netlify.app/*`
@@ -120,12 +133,14 @@ git push origin main
   - [ ] API restrictions: Google Sheets API only
 
 ### Apps Script
+
 - [ ] Deployment settings:
   - [ ] "Who has access": Anyone
   - [ ] Web App URL is correct
   - [ ] Latest version deployed
 
 ### Netlify
+
 - [ ] Environment variables scoped correctly
 - [ ] No sensitive data in git
 - [ ] `.env` file in `.gitignore`
@@ -138,15 +153,18 @@ git push origin main
 ### If env vars not working:
 
 - [ ] **Checked variable names:**
+
   - All start with `VITE_`
   - No typos in names
   - Case-sensitive match
 
 - [ ] **Triggered redeploy:**
+
   - Changes only apply after redeploy
   - Clear cache if needed
 
 - [ ] **Checked build logs:**
+
   - Variables are "defined" in build
   - No errors during build
 
@@ -157,11 +175,13 @@ git push origin main
 ### If API calls fail:
 
 - [ ] **API Key:**
+
   - Valid and not expired
   - Restrictions allow domain
   - Google Sheets API enabled
 
 - [ ] **Sheet ID:**
+
   - Correct sheet ID
   - Sheet is shared (view access)
   - Range names correct
@@ -193,11 +213,13 @@ After successful deployment:
 ## 📞 Support Resources
 
 **Documentation:**
+
 - `docs/NETLIFY_ENV_SETUP.md` - Detailed setup guide
 - `NETLIFY_SETUP.md` - Quick reference
 - `.env.example` - Template
 
 **Commands:**
+
 ```bash
 netlify help              # Help
 netlify status           # Site status
@@ -208,6 +230,7 @@ netlify open:site        # Open site
 ```
 
 **Links:**
+
 - Netlify Dashboard: https://app.netlify.com
 - Google Cloud Console: https://console.cloud.google.com
 - Apps Script: https://script.google.com

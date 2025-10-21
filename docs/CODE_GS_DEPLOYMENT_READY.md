@@ -8,26 +8,26 @@ File `Code.gs` hiện tại đã **HOÀN CHỈNH** và sẵn sàng deploy lên p
 
 ## 📊 Tính Năng So Với Production
 
-| Tính năng | Code.gs | Production | Trạng thái |
-|-----------|---------|------------|------------|
-| ✅ login | ✓ | ✓ | Giống nhau |
-| ✅ markAttendance | ✓ | ✓ | Giống nhau |
-| ✅ getMarkedStudents | ✓ | ✓ | **Đã thêm lại** |
-| ✅ updateAttendance | ✓ | ✓ | Giống nhau |
-| ✅ changeTeacherOfCalendar | ✓ | ✓ | Giống nhau |
-| ✅ updateStudentMissing | ✓ | ✓ | Giống nhau |
-| ✅ createCalendars | ✓ | ✓ | Giống nhau |
-| ✅ createPayment | ✓ | ✓ | Giống nhau |
-| 🆕 updatePayment | ✓ | ✗ | **TÍNH NĂNG MỚI** |
-| 🆕 deletePayment | ✓ | ✗ | **TÍNH NĂNG MỚI** |
-| ✅ updateLesson | ✓ | ✓ | Giống nhau |
-| ✅ newStudent | ✓ | ✓ | Giống nhau |
-| ✅ updateStudent | ✓ | ✓ | Giống nhau |
-| ✅ updateStudentByMonth | ✓ | ✓ | Giống nhau |
-| 🆕 Cache Mechanism | ✓ | ✗ | **CẢI TIẾN MỚI** |
-| 🆕 Idempotency | ✓ | ✗ | **CẢI TIẾN MỚI** |
-| 🆕 Error Handling | ✓ | Minimal | **CẢI TIẾN** |
-| ❌ addData | ✗ | ✓ | Không dùng trong frontend |
+| Tính năng                  | Code.gs | Production | Trạng thái                |
+| -------------------------- | ------- | ---------- | ------------------------- |
+| ✅ login                   | ✓       | ✓          | Giống nhau                |
+| ✅ markAttendance          | ✓       | ✓          | Giống nhau                |
+| ✅ getMarkedStudents       | ✓       | ✓          | **Đã thêm lại**           |
+| ✅ updateAttendance        | ✓       | ✓          | Giống nhau                |
+| ✅ changeTeacherOfCalendar | ✓       | ✓          | Giống nhau                |
+| ✅ updateStudentMissing    | ✓       | ✓          | Giống nhau                |
+| ✅ createCalendars         | ✓       | ✓          | Giống nhau                |
+| ✅ createPayment           | ✓       | ✓          | Giống nhau                |
+| 🆕 updatePayment           | ✓       | ✗          | **TÍNH NĂNG MỚI**         |
+| 🆕 deletePayment           | ✓       | ✗          | **TÍNH NĂNG MỚI**         |
+| ✅ updateLesson            | ✓       | ✓          | Giống nhau                |
+| ✅ newStudent              | ✓       | ✓          | Giống nhau                |
+| ✅ updateStudent           | ✓       | ✓          | Giống nhau                |
+| ✅ updateStudentByMonth    | ✓       | ✓          | Giống nhau                |
+| 🆕 Cache Mechanism         | ✓       | ✗          | **CẢI TIẾN MỚI**          |
+| 🆕 Idempotency             | ✓       | ✗          | **CẢI TIẾN MỚI**          |
+| 🆕 Error Handling          | ✓       | Minimal    | **CẢI TIẾN**              |
+| ❌ addData                 | ✗       | ✓          | Không dùng trong frontend |
 
 ---
 
@@ -36,24 +36,26 @@ File `Code.gs` hiện tại đã **HOÀN CHỈNH** và sẵn sàng deploy lên p
 ### 1. ✅ Giữ lại `getMarkedStudents`
 
 **Lý do:** Frontend vẫn đang dùng trong `AttendanceModal.vue`
+
 ```javascript
 // src/pages/attendances/widgets/AttendanceModal.vue:245
 const res = await sendRequest(Action.getMarkedStudents, attendanceCode)
 ```
 
 **Code:**
+
 ```javascript
 function getMarkedStudents(dataJson) {
   try {
-    const code = JSON.parse(dataJson);
-    const sheet = getSheet(sheetName.attendanceDetail);
-    const data = sheet.getDataRange().getValues();
-    const rowAttendanced = data.filter((row, index) => index > 2 && row[0] === code);
-    console.log('✅ Found marked students:', rowAttendanced.length);
-    return rowAttendanced;
+    const code = JSON.parse(dataJson)
+    const sheet = getSheet(sheetName.attendanceDetail)
+    const data = sheet.getDataRange().getValues()
+    const rowAttendanced = data.filter((row, index) => index > 2 && row[0] === code)
+    console.log('✅ Found marked students:', rowAttendanced.length)
+    return rowAttendanced
   } catch (error) {
-    console.error('Get marked students error:', error);
-    throw error;
+    console.error('Get marked students error:', error)
+    throw error
   }
 }
 ```
@@ -65,6 +67,7 @@ function getMarkedStudents(dataJson) {
 **Mục đích:** Cập nhật giao dịch thanh toán từ Financial Report page
 
 **Parameters:**
+
 ```javascript
 {
   studentCode: string,
@@ -77,6 +80,7 @@ function getMarkedStudents(dataJson) {
 ```
 
 **Return:**
+
 ```javascript
 {
   status: 'success' | 'error',
@@ -91,6 +95,7 @@ function getMarkedStudents(dataJson) {
 **Mục đích:** Xóa giao dịch thanh toán từ Financial Report page
 
 **Parameters:**
+
 ```javascript
 {
   studentCode: string,
@@ -99,6 +104,7 @@ function getMarkedStudents(dataJson) {
 ```
 
 **Return:**
+
 ```javascript
 {
   status: 'success' | 'error',
@@ -111,11 +117,13 @@ function getMarkedStudents(dataJson) {
 ### 4. 🆕 Cache Mechanism
 
 **Tính năng:**
+
 - Cache kết quả request trong 1 giờ
 - Tránh duplicate requests
 - Tăng performance
 
 **Usage từ frontend:**
+
 ```javascript
 // Send with idempotency key
 await sendRequest(Action.createPayment, data, uniqueKey)
@@ -128,12 +136,14 @@ await sendRequest(Action.createPayment, data, uniqueKey)
 ### 5. 🆕 Better Error Handling
 
 **Cải tiến:**
+
 - Try-catch cho tất cả functions
 - Return consistent error format
 - Logging rõ ràng với emoji
 - Không crash khi có lỗi
 
 **Example:**
+
 ```javascript
 try {
   // ... xử lý ...
@@ -149,6 +159,7 @@ try {
 ## 🚀 Deployment Steps
 
 ### 1. Backup Production Code
+
 ```
 1. Mở Apps Script editor
 2. File → Make a copy → "Backup_YYYYMMDD"
@@ -173,15 +184,16 @@ try {
 // Verify Actions include:
 export const Action = {
   // ... existing ...
-  updatePayment: 'updatePayment',  // ✓ Đã có
-  deletePayment: 'deletePayment',  // ✓ Đã có
-  getMarkedStudents: 'getMarkedStudents',  // ✓ Đã có
+  updatePayment: 'updatePayment', // ✓ Đã có
+  deletePayment: 'deletePayment', // ✓ Đã có
+  getMarkedStudents: 'getMarkedStudents', // ✓ Đã có
 }
 ```
 
 ### 4. Test Each Function
 
 **Test updatePayment:**
+
 ```javascript
 function testUpdatePayment() {
   const testData = {
@@ -190,30 +202,32 @@ function testUpdatePayment() {
     type: 'Khoa',
     lesson: 24,
     money: '1200000',
-    note: 'Test update'
-  };
-  const result = updatePayment(JSON.stringify(testData));
-  Logger.log(result);
+    note: 'Test update',
+  }
+  const result = updatePayment(JSON.stringify(testData))
+  Logger.log(result)
 }
 ```
 
 **Test deletePayment:**
+
 ```javascript
 function testDeletePayment() {
   const testData = {
     studentCode: 'GCGT55',
-    datePayment: '19/10/2025'
-  };
-  const result = deletePayment(JSON.stringify(testData));
-  Logger.log(result);
+    datePayment: '19/10/2025',
+  }
+  const result = deletePayment(JSON.stringify(testData))
+  Logger.log(result)
 }
 ```
 
 **Test getMarkedStudents:**
+
 ```javascript
 function testGetMarkedStudents() {
-  const result = getMarkedStudents('"DD191025-Dance2"');
-  Logger.log('Found:', result.length, 'students');
+  const result = getMarkedStudents('"DD191025-Dance2"')
+  Logger.log('Found:', result.length, 'students')
 }
 ```
 
@@ -232,14 +246,16 @@ function testGetMarkedStudents() {
 ## 🔍 Testing Checklist
 
 ### Backend (Apps Script)
+
 - [ ] Run testUpdatePayment() → Success
-- [ ] Run testDeletePayment() → Success  
+- [ ] Run testDeletePayment() → Success
 - [ ] Run testGetMarkedStudents() → Returns array
 - [ ] Check Execution log → No errors
 - [ ] Test với data thực → Update đúng row
 - [ ] Test với code không tồn tại → Error message
 
 ### Frontend Integration
+
 - [ ] Financial Report page loads → OK
 - [ ] Edit payment → Saves successfully
 - [ ] Delete payment → Removes from sheet
@@ -248,6 +264,7 @@ function testGetMarkedStudents() {
 - [ ] Cache works (duplicate request fast)
 
 ### Data Integrity
+
 - [ ] Updated payment reflects in sheet
 - [ ] Deleted payment removed from sheet
 - [ ] No data corruption
@@ -259,6 +276,7 @@ function testGetMarkedStudents() {
 ## 📝 Post-Deployment Monitoring
 
 ### Check logs sau 1 giờ:
+
 ```
 ✅ Loaded marked students: XX for code: ...
 ✅ Payment updated successfully
@@ -267,6 +285,7 @@ function testGetMarkedStudents() {
 ```
 
 ### Check for errors:
+
 ```
 ❌ Error updating payment: ...
 ❌ Parse money error: ...
@@ -274,6 +293,7 @@ function testGetMarkedStudents() {
 ```
 
 ### Monitor performance:
+
 - Response time có giảm không? (cache)
 - Có duplicate requests không?
 - Error rate thế nào?
@@ -283,16 +303,19 @@ function testGetMarkedStudents() {
 ## 🎉 Expected Benefits
 
 ### 1. Cache & Idempotency
+
 - ⚡ Giảm 50-70% response time cho duplicate requests
 - 🛡️ Tránh duplicate operations
 - 📊 Giảm quota usage
 
 ### 2. CRUD Payment
+
 - ✏️ Có thể edit payment khi nhập sai
 - 🗑️ Có thể delete payment không hợp lệ
 - 🔍 Dễ quản lý financial data
 
 ### 3. Error Handling
+
 - 🐛 Dễ debug khi có lỗi
 - 📋 Logs rõ ràng với emoji
 - 🚨 Không crash toàn bộ app
@@ -302,6 +325,7 @@ function testGetMarkedStudents() {
 ## 📊 Summary
 
 **Code.gs hiện tại:**
+
 - ✅ Backward compatible 100%
 - ✅ Có đủ tất cả functions production đang dùng
 - ✅ Thêm 2 functions mới (updatePayment, deletePayment)
@@ -312,6 +336,7 @@ function testGetMarkedStudents() {
 - ✅ Sẵn sàng deploy
 
 **Các bước tiếp theo:**
+
 1. ✅ Đã kiểm tra dependencies → getMarkedStudents cần giữ lại
 2. ✅ Đã thêm lại getMarkedStudents vào Code.gs
 3. ✅ Code.gs hoàn chỉnh và test locally
@@ -322,24 +347,32 @@ function testGetMarkedStudents() {
 ## 🚨 IMPORTANT NOTES
 
 ### 1. Sheet Structure
+
 Đảm bảo sheet `DongHoc` có đúng cấu trúc:
+
 - Row 1-2: Metadata
 - Row 3: Headers (studentCode, datePayment, type, lesson, money, note)
 - Row 4+: Data
 
 ### 2. Column Names
+
 Headers phải match chính xác:
+
 - `studentCode` (không phải `student_code` hay `code`)
 - `datePayment` (không phải `date` hay `payment_date`)
 
 ### 3. Date Format
+
 Ngày tháng phải là string format `DD/MM/YYYY`:
+
 - ✅ "19/10/2025"
 - ❌ "2025-10-19"
 - ❌ 19/10/2025 (number)
 
 ### 4. Money Format
+
 Tiền có thể là:
+
 - String: "1200000" hoặc "1.200.000"
 - Number: 1200000
 

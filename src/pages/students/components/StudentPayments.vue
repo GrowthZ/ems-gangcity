@@ -91,10 +91,10 @@ const pageSize = 10
 // Helper functions
 const formatDate = (dateString) => {
   if (!dateString) return 'Chưa có ngày'
-  
+
   try {
     let date
-    
+
     // Format: DD/MM/YYYY
     if (dateString.includes('/')) {
       const parts = dateString.split('/')
@@ -102,7 +102,7 @@ const formatDate = (dateString) => {
         // Assuming DD/MM/YYYY
         date = new Date(parts[2], parts[1] - 1, parts[0])
       }
-    } 
+    }
     // Format: YYYY-MM-DD or ISO
     else if (dateString.includes('-')) {
       date = new Date(dateString)
@@ -115,13 +115,13 @@ const formatDate = (dateString) => {
     else {
       date = new Date(dateString)
     }
-    
+
     // Check if date is valid
     if (isNaN(date.getTime())) {
       console.warn('⚠️ Invalid payment date:', dateString)
       return dateString
     }
-    
+
     return date.toLocaleDateString('vi-VN', {
       day: '2-digit',
       month: '2-digit',

@@ -3,27 +3,35 @@
 ## 📋 Các Biến Môi Trường Cần Thiết
 
 ### 1. **VITE_GOOGLE_SHEETS_API_KEY**
+
 ```
 AIzaSyC9NlfiP4qs-Hfaej4RpmxxWXRcAoKM7ao
 ```
+
 **Mục đích:** API key để đọc dữ liệu từ Google Sheets (API v4)
 
 ### 2. **VITE_GOOGLE_SHEET_ID**
+
 ```
 1HhIpXU6Egq9MZmyCAvPnEjCT8V4n9soD7EY4LQ8Nt0w
 ```
+
 **Mục đích:** ID của Google Sheet chứa dữ liệu
 
 ### 3. **VITE_APPS_SCRIPT_URL**
+
 ```
 https://script.google.com/macros/s/AKfycbwYzdx-Bswcg5OxvIg7uFD0ki3dRg6MI_z_BfGtHaRkLelqW4bjOFOsLEJVZxdjh6Rs/exec
 ```
+
 **Mục đích:** URL của Apps Script Web App (để ghi dữ liệu)
 
 ### 4. **VITE_API_MODE** (Optional)
+
 ```
 apps-script
 ```
+
 **Mục đích:** Chế độ API (mặc định: apps-script)
 
 ---
@@ -33,6 +41,7 @@ apps-script
 ### Cách 1: Qua Netlify Dashboard (UI)
 
 #### Bước 1: Vào Site Settings
+
 ```
 1. Login vào Netlify: https://app.netlify.com
 2. Chọn site của bạn (ems-gangcity)
@@ -40,6 +49,7 @@ apps-script
 ```
 
 #### Bước 2: Mở Environment Variables
+
 ```
 1. Sidebar → Environment variables
 2. Hoặc trực tiếp: Site settings → Environment variables
@@ -48,6 +58,7 @@ apps-script
 #### Bước 3: Thêm Từng Biến
 
 **Thêm VITE_GOOGLE_SHEETS_API_KEY:**
+
 ```
 1. Click "Add a variable" hoặc "Add variable"
 2. Key: VITE_GOOGLE_SHEETS_API_KEY
@@ -57,6 +68,7 @@ apps-script
 ```
 
 **Thêm VITE_GOOGLE_SHEET_ID:**
+
 ```
 1. Click "Add a variable"
 2. Key: VITE_GOOGLE_SHEET_ID
@@ -66,6 +78,7 @@ apps-script
 ```
 
 **Thêm VITE_APPS_SCRIPT_URL:**
+
 ```
 1. Click "Add a variable"
 2. Key: VITE_APPS_SCRIPT_URL
@@ -75,6 +88,7 @@ apps-script
 ```
 
 **Thêm VITE_API_MODE (Optional):**
+
 ```
 1. Click "Add a variable"
 2. Key: VITE_API_MODE
@@ -84,6 +98,7 @@ apps-script
 ```
 
 #### Bước 4: Trigger Redeploy
+
 ```
 1. Sau khi thêm xong các biến
 2. Vào Deploys tab
@@ -96,22 +111,26 @@ apps-script
 ### Cách 2: Qua Netlify CLI
 
 #### Bước 1: Cài Netlify CLI
+
 ```bash
 npm install -g netlify-cli
 ```
 
 #### Bước 2: Login
+
 ```bash
 netlify login
 ```
 
 #### Bước 3: Link Site
+
 ```bash
 cd /home/hoangdt/Workspace/gang-city/ems-gangcity
 netlify link
 ```
 
 #### Bước 4: Set Environment Variables
+
 ```bash
 # Set VITE_GOOGLE_SHEETS_API_KEY
 netlify env:set VITE_GOOGLE_SHEETS_API_KEY "AIzaSyC9NlfiP4qs-Hfaej4RpmxxWXRcAoKM7ao"
@@ -127,6 +146,7 @@ netlify env:set VITE_API_MODE "apps-script"
 ```
 
 #### Bước 5: Verify
+
 ```bash
 # List all environment variables
 netlify env:list
@@ -139,6 +159,7 @@ netlify env:list
 ```
 
 #### Bước 6: Deploy
+
 ```bash
 netlify deploy --prod
 ```
@@ -150,6 +171,7 @@ netlify deploy --prod
 ⚠️ **Lưu ý:** Không nên đặt API keys trực tiếp trong `netlify.toml` vì nó sẽ được commit lên Git.
 
 Nếu muốn dùng cho development:
+
 ```toml
 # netlify.toml
 [build.environment]
@@ -162,11 +184,13 @@ Nếu muốn dùng cho development:
 ## 📸 Screenshot Guide
 
 ### 1. Netlify Dashboard
+
 ```
 https://app.netlify.com/sites/YOUR-SITE-NAME/settings/env
 ```
 
 ### 2. Environment Variables Page
+
 ```
 ┌─────────────────────────────────────────────────┐
 │ Environment variables                            │
@@ -193,6 +217,7 @@ https://app.netlify.com/sites/YOUR-SITE-NAME/settings/env
 ### Sau khi cấu hình, kiểm tra:
 
 - [ ] Tất cả 3 biến bắt buộc đã được thêm:
+
   - [ ] VITE_GOOGLE_SHEETS_API_KEY
   - [ ] VITE_GOOGLE_SHEET_ID
   - [ ] VITE_APPS_SCRIPT_URL
@@ -200,6 +225,7 @@ https://app.netlify.com/sites/YOUR-SITE-NAME/settings/env
 - [ ] Deploy lại site (trigger redeploy)
 
 - [ ] Check build logs:
+
   ```
   Building with environment variables:
   VITE_GOOGLE_SHEETS_API_KEY: defined
@@ -218,31 +244,37 @@ https://app.netlify.com/sites/YOUR-SITE-NAME/settings/env
 ## 🐛 Troubleshooting
 
 ### Issue 1: Biến không được load
+
 ```
 ❌ import.meta.env.VITE_GOOGLE_SHEETS_API_KEY is undefined
 ```
 
 **Giải pháp:**
+
 1. Check tên biến phải bắt đầu với `VITE_`
 2. Trigger redeploy sau khi thêm biến
 3. Clear build cache: Deploys → Options → Clear cache and deploy
 
 ### Issue 2: API Key không hoạt động
+
 ```
 ❌ Google Sheets API error: API key not valid
 ```
 
 **Giải pháp:**
+
 1. Verify API key trong Google Cloud Console
 2. Check API key restrictions (HTTP referrers)
 3. Enable Google Sheets API v4
 
 ### Issue 3: Apps Script URL không hoạt động
+
 ```
 ❌ Failed to fetch from Apps Script
 ```
 
 **Giải pháp:**
+
 1. Verify Apps Script deployment
 2. Check "Anyone" has access
 3. Test URL trực tiếp trong browser
@@ -254,6 +286,7 @@ https://app.netlify.com/sites/YOUR-SITE-NAME/settings/env
 ### 1. API Key Restrictions
 
 **Google Cloud Console:**
+
 ```
 1. APIs & Services → Credentials
 2. Click vào API key
@@ -278,6 +311,7 @@ VITE_GOOGLE_SHEETS_API_KEY=AIza...staging...
 ```
 
 **Trong Netlify:**
+
 ```
 Variable scopes:
 - Production only
@@ -337,6 +371,7 @@ echo "🎉 Done! Now run: netlify deploy --prod"
 ```
 
 **Usage:**
+
 ```bash
 chmod +x setup-netlify-env.sh
 ./setup-netlify-env.sh

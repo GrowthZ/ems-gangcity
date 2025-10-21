@@ -288,22 +288,27 @@ const studentId = computed(() => route.params.id)
 const loadStudentData = async () => {
   loading.value = true
   try {
-    await store.load(DataSheet.student, [DataSheet.location, DataSheet.group, DataSheet.followStudent, DataSheet.payment])
+    await store.load(DataSheet.student, [
+      DataSheet.location,
+      DataSheet.group,
+      DataSheet.followStudent,
+      DataSheet.payment,
+    ])
 
     // Tìm học viên theo ID
     const foundStudent = store.allData.find((s) => s.id == studentId.value || s.code === studentId.value)
 
     if (foundStudent) {
       console.log('📖 Found student:', foundStudent)
-      
+
       // Merge với dữ liệu followStudent để có thông tin buổi học
       const followStudentData = store.allAnotherData[2] || []
       const followStudent = followStudentData.find((fs) => fs.code === foundStudent.code)
-      
+
       // Load payment data to get actual payment count
       const paymentData = store.allAnotherData[3] || []
-      const studentPayments = paymentData.filter((p) => 
-        (p.studentCode || '').toLowerCase() === foundStudent.code.toLowerCase()
+      const studentPayments = paymentData.filter(
+        (p) => (p.studentCode || '').toLowerCase() === foundStudent.code.toLowerCase(),
       )
 
       console.log('📊 Follow student data:', followStudent)
@@ -340,11 +345,6 @@ const loadStudentData = async () => {
   } finally {
     loading.value = false
   }
-}
-
-const callStudent = (phone) => {
-  if (!phone) return
-  window.location.href = `tel:${phone}`
 }
 
 const showPayModal = () => {
