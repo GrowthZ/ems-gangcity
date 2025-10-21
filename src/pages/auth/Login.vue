@@ -55,10 +55,12 @@ import { useRouter } from 'vue-router'
 import { useForm, useToast } from 'vuestic-ui'
 import { validators } from '../../services/utils'
 import { Action, sendRequest } from '../../stores/data-from-sheet'
+import { useUserStore } from '../../stores/user-store'
 
 const { validate } = useForm('form')
 const { push } = useRouter()
 const { init } = useToast()
+const userStore = useUserStore()
 
 const formData = reactive({
   username: '',
@@ -100,7 +102,9 @@ const checkLogin = async (username: string, password: string) => {
   const res = await sendRequest(Action.login, data)
   console.log(res)
   if (res.data.data != '') {
-    localStorage.setItem('user', JSON.stringify(res.data.data))
+    const userData = res.data.data
+    // Update store (which will also update localStorage)
+    userStore.setUser(userData)
     init({ message: 'Đăng nhập thành công', color: 'success' })
     loading.value = false
     push({ name: page() })

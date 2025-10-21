@@ -2,11 +2,22 @@ import { defineStore } from 'pinia'
 
 export const useUserStore = defineStore('user', {
   state: () => {
-    const user = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')!) : null
+    // Safely parse user from localStorage with error handling
+    let user = null
+    try {
+      const userStr = localStorage.getItem('user')
+      if (userStr) {
+        user = JSON.parse(userStr)
+      }
+    } catch (error) {
+      console.error('Error parsing user from localStorage:', error)
+      user = null
+    }
+
     return {
-      userName: user.username,
-      role: user.role,
-      token: user.token,
+      userName: user?.username || '',
+      role: user?.role || 'guest',
+      token: user?.token || '',
       email: 'gangcity@gmail.com',
       memberSince: '8/12/2020',
       pfp: 'https://picsum.photos/id/22/200/300',
@@ -21,6 +32,21 @@ export const useUserStore = defineStore('user', {
 
     changeUserName(userName: string) {
       this.userName = userName
+    },
+
+    setUser(user: { username: string; role: string; token: string }) {
+      this.userName = user.username
+      this.role = user.role
+      this.token = user.token
+      // Save to localStorage
+      localStorage.setItem('user', JSON.stringify(user))
+    },
+
+    logout() {
+      this.userName = ''
+      this.role = 'guest'
+      this.token = ''
+      localStorage.removeItem('user')
     },
   },
 })

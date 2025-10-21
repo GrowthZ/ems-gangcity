@@ -50,11 +50,13 @@
   </VaSidebar>
 </template>
 <script lang="ts">
-import { defineComponent, watch, ref, computed, onMounted } from 'vue'
+import { defineComponent, watch, ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
+import { storeToRefs } from 'pinia'
 
 import { useI18n } from 'vue-i18n'
 import { useColors } from 'vuestic-ui'
+import { useUserStore } from '../../stores/user-store'
 
 import navigationRoutes, { type INavigationRoute } from './NavigationRoutes'
 
@@ -70,9 +72,10 @@ export default defineComponent({
     const { getColor, colorToRgba } = useColors()
     const route = useRoute()
     const { t } = useI18n()
+    const userStore = useUserStore()
+    const { role } = storeToRefs(userStore)
 
     const value = ref<boolean[]>([])
-    const routers = ref<any[]>([])
 
     const writableVisible = computed({
       get: () => props.visible,
@@ -89,15 +92,13 @@ export default defineComponent({
       return section.children.some(({ name }) => route.path.endsWith(`${name}`))
     }
 
-    onMounted(() => {
-      routers.value = navigationRoutes.routes.filter((route) => isShow(route.name))
-    })
-
+    // Function to check if route should be visible based on user role
     const isShow = (routeName: string) => {
-      const user = JSON.parse(localStorage.getItem('user')!) || {}
-      const isTeacher = user.role === 'teacher'
-      const isManager = user.role === 'manager'
-      const isAdmin = user.role === 'admin'
+      // Safely get user role with fallback
+      const userRole = role.value || 'guest'
+      const isTeacher = userRole === 'teacher'
+      const isManager = userRole === 'manager'
+      const isAdmin = userRole === 'admin'
       const routeTeacher = ['attendances', 'teacher-salary']
       if (isTeacher) {
         return routeTeacher.includes(routeName)
@@ -109,6 +110,11 @@ export default defineComponent({
 
       return false
     }
+
+    // Computed property for filtered routes - automatically updates when role changes
+    const routers = computed(() => {
+      return navigationRoutes.routes.filter((route) => isShow(route.name))
+    })
 
     const setActiveExpand = () =>
       (value.value = navigationRoutes.routes.map((route: INavigationRoute) => routeHasActiveChild(route)))
@@ -123,12 +129,14 @@ export default defineComponent({
 
     watch(() => route.fullPath, setActiveExpand, { immediate: true })
 
+    // Watch user role changes to update sidebar
     watch(
-      route,
+      () => role.value,
       () => {
-        routers.value = navigationRoutes.routes.filter((route) => isShow(route.name))
+        // Sidebar will auto-update because routers is computed
+        setActiveExpand()
       },
-      { deep: true, immediate: true },
+      { immediate: true },
     )
 
     return {

@@ -41,6 +41,7 @@ import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useColors } from 'vuestic-ui'
 import { useRouter } from 'vue-router'
+import { useUserStore } from '../../../../stores/user-store'
 
 const { colors, setHSLAColor } = useColors()
 const hoverColor = computed(() => setHSLAColor(colors.focus, { a: 0.1 }))
@@ -132,9 +133,12 @@ const resolveLinkAttribute = (item: ProfileListItem) => {
   return item.to ? { to: { name: item.to } } : item.href ? { href: item.href, target: '_blank' } : {}
 }
 
+const userStore = useUserStore()
+
 const handleItemClick = (item: ProfileListItem) => {
   if (item.name == 'logout') {
-    localStorage.clear()
+    // Use store action to clear user data
+    userStore.logout()
     router.push({ name: 'login' })
   }
 }
