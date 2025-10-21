@@ -1,5 +1,5 @@
 <template>
-  <VaSidebar v-model="writableVisible" :width="sidebarWidth" :color="color" minimized-width="0">
+  <VaSidebar v-model="writableVisible" :width="sidebarWidth" :color="color" :minimized="minimized" minimized-width="0">
     <VaAccordion v-model="value" multiple>
       <VaCollapse v-for="(route, index) in routers" :key="index">
         <template #header="{ value: isCollapsed }">
@@ -65,6 +65,8 @@ export default defineComponent({
   props: {
     visible: { type: Boolean, default: true },
     mobile: { type: Boolean, default: false },
+    minimized: { type: Boolean, default: false },
+    animated: { type: Boolean, default: true },
   },
   emits: ['update:visible'],
 
@@ -76,6 +78,15 @@ export default defineComponent({
     const { role } = storeToRefs(userStore)
 
     const value = ref<boolean[]>([])
+
+    // DEBUG: Log initial state
+    console.log('[AppSidebar] Setup called')
+    console.log('[AppSidebar] User role:', role.value)
+    console.log('[AppSidebar] Total navigation routes:', navigationRoutes.routes.length)
+    console.log(
+      '[AppSidebar] Navigation routes:',
+      navigationRoutes.routes.map((r) => r.name),
+    )
 
     const writableVisible = computed({
       get: () => props.visible,
@@ -96,24 +107,37 @@ export default defineComponent({
     const isShow = (routeName: string) => {
       // Safely get user role with fallback
       const userRole = role.value || 'guest'
+      console.log('[AppSidebar isShow]', routeName, 'with role:', userRole)
+
       const isTeacher = userRole === 'teacher'
       const isManager = userRole === 'manager'
       const isAdmin = userRole === 'admin'
+
       const routeTeacher = ['attendances', 'teacher-salary']
       if (isTeacher) {
-        return routeTeacher.includes(routeName)
+        const show = routeTeacher.includes(routeName)
+        console.log('[AppSidebar isShow] Teacher route check:', routeName, '=', show)
+        return show
       }
 
       if (isManager || isAdmin) {
+        console.log('[AppSidebar isShow] Manager/Admin - showing all')
         return true
       }
 
+      console.log('[AppSidebar isShow] Guest - hiding')
       return false
     }
 
     // Computed property for filtered routes - automatically updates when role changes
     const routers = computed(() => {
-      return navigationRoutes.routes.filter((route) => isShow(route.name))
+      const filtered = navigationRoutes.routes.filter((route) => isShow(route.name))
+      console.log('[AppSidebar] Filtered routes count:', filtered.length)
+      console.log(
+        '[AppSidebar] Filtered routes:',
+        filtered.map((r) => r.name),
+      )
+      return filtered
     })
 
     const setActiveExpand = () =>

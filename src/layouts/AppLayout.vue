@@ -9,7 +9,12 @@
     </template>
 
     <template #left>
-      <AppSidebar :minimized="isSidebarMinimized" :animated="!isMobile" :mobile="isMobile" />
+      <AppSidebar
+        v-model:visible="isSidebarVisible"
+        :minimized="isSidebarMinimized"
+        :animated="!isMobile"
+        :mobile="isMobile"
+      />
     </template>
 
     <template #content>
@@ -50,6 +55,14 @@ const sidebarMinimizedWidth = ref(undefined)
 const isMobile = ref(false)
 const isTablet = ref(false)
 const { isSidebarMinimized } = storeToRefs(GlobalStore)
+
+// Computed for sidebar visibility
+const isSidebarVisible = computed({
+  get: () => !isSidebarMinimized.value,
+  set: (value) => {
+    isSidebarMinimized.value = !value
+  },
+})
 
 const onResize = () => {
   isSidebarMinimized.value = breakpoints.mdDown

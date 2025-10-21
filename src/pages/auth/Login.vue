@@ -100,11 +100,34 @@ const checkLogin = async (username: string, password: string) => {
     password: password,
   }
   const res = await sendRequest(Action.login, data)
-  console.log(res)
+  console.log('[Login] API Response:', res)
+  console.log('[Login] User data:', res.data.data)
+
   if (res.data.data != '') {
     const userData = res.data.data
+
+    // Validate userData has required fields
+    if (!userData.username || !userData.token) {
+      init({ message: 'Dữ liệu đăng nhập không hợp lệ', color: 'danger' })
+      loading.value = false
+      return
+    }
+
+    // Check if role exists
+    if (!userData.role) {
+      init({ message: 'Tài khoản chưa được cấp quyền. Vui lòng liên hệ admin.', color: 'warning' })
+      loading.value = false
+      return
+    }
+
+    console.log('[Login] Setting user to store:', userData)
     // Update store (which will also update localStorage)
     userStore.setUser(userData)
+
+    // Verify store was updated
+    console.log('[Login] Store role after setUser:', userStore.role)
+    console.log('[Login] localStorage after setUser:', localStorage.getItem('user'))
+
     init({ message: 'Đăng nhập thành công', color: 'success' })
     loading.value = false
     push({ name: page() })

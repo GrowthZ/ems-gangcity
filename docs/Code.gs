@@ -123,23 +123,59 @@ function getSheet(name) {
 function login(paramString) {
   try {
     const param = JSON.parse(paramString);
+    Logger.log('🔐 Login attempt for username: ' + param.username);
+    
     const sheet = getSheet(sheetName.user);
+    
+    if (!sheet) {
+      Logger.log('❌ Sheet not found: ' + sheetName.user);
+      throw new Error('Sheet TaiKhoan không tồn tại');
+    }
+    
     const data = sheet.getDataRange().getValues();
+    Logger.log('📊 Total rows in sheet: ' + data.length);
 
-    // Skip first 3 rows (headers)
-    for (let i = 3; i < data.length; i++) {
-      if (data[i][0] === param.username && data[i][1] === param.password) {
-        return {
-          username: data[i][0],
-          role: data[i][2] || 'user',
-          token: 'token_' + Date.now()
-        };
+    // Skip first 2 rows (row 1: title, row 2: headers)
+    // Data starts from row 3 (index 2)
+    // Columns: A=username(0), B=password(1), C=token(2), D=role(3)
+    for (let i = 2; i < data.length; i++) {
+      const rowUsername = String(data[i][0]).trim();
+      const rowPassword = String(data[i][1]).trim();
+      const inputUsername = String(param.username).trim();
+      const inputPassword = String(param.password).trim();
+      
+      Logger.log('Checking row ' + (i+1) + ': ' + rowUsername);
+      
+      if (rowUsername === inputUsername) {
+        Logger.log('✅ Username match found at row ' + (i+1));
+        
+        if (rowPassword === inputPassword) {
+          Logger.log('✅ Password match!');
+          
+          const role = data[i][3] ? String(data[i][3]).trim() : 'guest';
+          const token = data[i][2] ? String(data[i][2]).trim() : ('token_' + Date.now());
+          
+          const result = {
+            username: rowUsername,
+            role: role,
+            token: token
+          };
+          
+          Logger.log('✅ Login success: ' + JSON.stringify(result));
+          return result;
+        } else {
+          Logger.log('❌ Password mismatch');
+          Logger.log('Expected: "' + rowPassword + '" (length: ' + rowPassword.length + ')');
+          Logger.log('Got: "' + inputPassword + '" (length: ' + inputPassword.length + ')');
+        }
       }
     }
 
+    Logger.log('❌ No matching user found');
     throw new Error('Sai tên đăng nhập hoặc mật khẩu');
+    
   } catch (error) {
-    console.error('Login error:', error);
+    Logger.log('❌ Login error: ' + error.toString());
     throw error;
   }
 }

@@ -35,11 +35,20 @@ export const useUserStore = defineStore('user', {
     },
 
     setUser(user: { username: string; role: string; token: string }) {
+      console.log('[UserStore setUser] Received user:', user)
+      console.log('[UserStore setUser] User.role:', user.role)
+      console.log('[UserStore setUser] User.username:', user.username)
+
       this.userName = user.username
-      this.role = user.role
+      this.role = user.role || 'guest' // Fallback to guest if no role
       this.token = user.token
+
       // Save to localStorage
-      localStorage.setItem('user', JSON.stringify(user))
+      const savedData = { username: user.username, role: user.role || 'guest', token: user.token }
+      localStorage.setItem('user', JSON.stringify(savedData))
+
+      console.log('[UserStore setUser] Store role after update:', this.role)
+      console.log('[UserStore setUser] Saved to localStorage:', localStorage.getItem('user'))
     },
 
     logout() {
