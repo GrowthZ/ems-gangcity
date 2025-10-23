@@ -114,7 +114,7 @@
         :is-update="isUpdateAttendance"
         @close="cancel"
         @save="
-          (studentMarks) => {
+          (studentMarks: any) => {
             isUpdateAttendance ? updateData(studentMarks) : sendData(studentMarks)
             ok()
           }
@@ -127,7 +127,7 @@
         :teachers="teachers"
         @close="cancel"
         @save="
-          (data) => {
+          (data: any) => {
             changeTeacher(data)
             ok()
           }
