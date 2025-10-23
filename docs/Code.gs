@@ -276,25 +276,54 @@ function updateAttendance(paramString) {
 function changeTeacherOfCalendar(paramString) {
   try {
     const param = JSON.parse(paramString);
+    Logger.log('🔄 Changing teacher for calendar: ' + JSON.stringify(param));
+    
     const sheet = getSheet(sheetName.calendar);
+    
+    if (!sheet) {
+      Logger.log('❌ Sheet not found: ' + sheetName.calendar);
+      throw new Error('Sheet LichDay không tồn tại');
+    }
+    
     const data = sheet.getDataRange().getValues();
+    Logger.log('📊 Total rows in calendar sheet: ' + data.length);
 
-    for (let i = 3; i < data.length; i++) {
-      if (data[i][0] === param.calendarId || (data[i][1] === param.date && data[i][3] === param.group)) {
-        const rowNumber = i + 1;
-        sheet.getRange(rowNumber, 5, 1, 2).setValues([[
-          param.teacher || data[i][4],
-          param.subTeacher || data[i][5]
-        ]]);
+    // Skip first 2 rows (row 1: title, row 2: headers)
+    // Data starts from row 3 (index 2)
+    // Columns: A=attendanceCode(0), B=date(1), C=time(2), D=group(3), E=teacher(4), F=subTeacher(5)
+    for (let i = 2; i < data.length; i++) {
+      const rowAttendanceCode = String(data[i][0]).trim();
+      const rowDate = String(data[i][1]).trim();
+      const rowGroup = String(data[i][3]).trim();
+      
+      Logger.log('Checking row ' + (i+1) + ': attendanceCode=' + rowAttendanceCode + ', date=' + rowDate + ', group=' + rowGroup);
+      
+      // So sánh theo attendanceCode HOẶC (date + group)
+      const matchByCode = param.attendanceCode && rowAttendanceCode === String(param.attendanceCode).trim();
+      const matchByDateGroup = param.date && param.group && 
+                                rowDate === String(param.date).trim() && 
+                                rowGroup === String(param.group).trim();
+      
+      if (matchByCode || matchByDateGroup) {
+        Logger.log('✅ Match found at row ' + (i+1));
         
-        console.log('✅ Đổi giáo viên thành công');
+        const rowNumber = i + 1;
+        const newTeacher = param.teacher || data[i][4];
+        const newSubTeacher = param.subTeacher || data[i][5];
+        
+        // Update columns E (teacher) and F (subTeacher)
+        sheet.getRange(rowNumber, 5, 1, 2).setValues([[newTeacher, newSubTeacher]]);
+        
+        Logger.log('✅ Teacher changed successfully to: ' + newTeacher + ' / ' + newSubTeacher);
         return { success: true, message: 'Đổi giáo viên thành công' };
       }
     }
 
+    Logger.log('❌ No matching calendar found');
+    Logger.log('Searched for: attendanceCode=' + param.attendanceCode + ', date=' + param.date + ', group=' + param.group);
     throw new Error('Không tìm thấy lịch dạy');
   } catch (error) {
-    console.error('Change teacher error:', error);
+    Logger.log('❌ Change teacher error: ' + error.toString());
     throw error;
   }
 }

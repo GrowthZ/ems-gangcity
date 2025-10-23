@@ -223,9 +223,13 @@ const checkCalendar = (calendar: any) => {
 
 const changeTeacherOfCalendar = (data: any) => {
   calendars.value = calendars.value.map((calendar) => {
-    if (calendar.attendanceCode == data[0]) {
-      calendar.teacher = data[1]
-      calendar.subTeacher = data[2]
+    // So sánh theo attendanceCode hoặc (date + group)
+    if (
+      calendar.attendanceCode === data.attendanceCode ||
+      (calendar.dateTime === data.date && calendar.group === data.group)
+    ) {
+      calendar.teacher = data.teacher
+      calendar.subTeacher = data.subTeacher
     }
     return calendar
   })

@@ -1,33 +1,39 @@
 # ✅ FIXED: Login role bị sai (Guest thay vì Manager)
 
 ## Vấn đề
+
 User `hoangdt` login nhưng role = `guest` thay vì `manager` như trong Google Sheets.
 
 ## Root Cause
+
 **Apps Script lấy SAI column index!**
 
 Google Sheets structure:
+
 - Column A (index 0): username
 - Column B (index 1): password
 - Column C (index 2): token
 - Column D (index 3): role ← ĐÚNG
 
 Code cũ:
+
 ```javascript
 // ❌ SAI - Lấy column C (token) làm role
-role: data[i][2]  // Lấy token thay vì role!
+role: data[i][2] // Lấy token thay vì role!
 ```
 
 ## Solution
 
 ### 1. Fix Apps Script (`docs/Code.gs`)
+
 ```javascript
 // ✅ ĐÚNG - Lấy column D
-const role = data[i][3] || 'guest';  // Column D (index 3)
-const token = data[i][2] || ('token_' + Date.now());  // Column C (index 2)
+const role = data[i][3] || 'guest' // Column D (index 3)
+const token = data[i][2] || 'token_' + Date.now() // Column C (index 2)
 ```
 
 ### 2. Add validation (`src/pages/auth/Login.vue`)
+
 ```javascript
 // ✅ Check if role exists
 if (!userData.role) {
@@ -37,6 +43,7 @@ if (!userData.role) {
 ```
 
 ### 3. Add logging (`src/stores/user-store.ts`)
+
 ```javascript
 console.log('[UserStore setUser] User.role:', user.role)
 // Để debug dễ dàng
@@ -45,6 +52,7 @@ console.log('[UserStore setUser] User.role:', user.role)
 ## Expected Console Logs
 
 Khi login thành công với hoangdt:
+
 ```
 [Login] User data: { username: 'hoangdt', role: 'manager', token: 'mh0wjn1h' }
 [UserStore setUser] User.role: manager
@@ -57,6 +65,7 @@ Khi login thành công với hoangdt:
 ### QUAN TRỌNG: Phải deploy Apps Script trước!
 
 1. **Deploy Code.gs:**
+
    - Mở Google Apps Script editor
    - Paste code từ `docs/Code.gs`
    - Save → Deploy → New deployment

@@ -92,7 +92,13 @@ const findTeacher = (nickname: string) => {
 
 const emit = defineEmits(['close', 'save'])
 const onSave = () => {
-  emit('save', [calendar.value.attendanceCode, teacherSelected.value, selectedSubTeacher.value.value])
+  emit('save', {
+    attendanceCode: calendar.value.attendanceCode || '',
+    date: calendar.value.dateTime || '',
+    group: calendar.value.group || '',
+    teacher: teacherSelected.value || '',
+    subTeacher: selectedSubTeacher.value?.value || '',
+  })
 }
 
 watch(

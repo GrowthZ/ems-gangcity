@@ -9,6 +9,7 @@ User `hoangdt` login thành công nhưng role hiển thị là `guest` thay vì 
 **Apps Script đang lấy SAI column index cho role!**
 
 ### Google Sheets structure:
+
 ```
 Row 1: Headers
 Row 2: (empty or subheaders)
@@ -20,16 +21,18 @@ Row 3: Data starts
 ```
 
 ### Code cũ (SAI):
+
 ```javascript
 // ❌ WRONG - Lấy column C (token) làm role
 return {
   username: data[i][0],
-  role: data[i][2] || 'user',  // ← SAI! Column C là token
-  token: 'token_' + Date.now()
-};
+  role: data[i][2] || 'user', // ← SAI! Column C là token
+  token: 'token_' + Date.now(),
+}
 ```
 
 ### Kết quả:
+
 - API trả về `role = "123"` (là token từ column C)
 - UserStore nhận `role = "123"` → không match admin/manager/teacher
 - Sidebar isShow() fallback về `guest`
@@ -45,35 +48,35 @@ return {
 // ✅ CORRECT - Lấy đúng columns
 function login(paramString) {
   try {
-    const param = JSON.parse(paramString);
-    const sheet = getSheet(sheetName.user);
-    const data = sheet.getDataRange().getValues();
+    const param = JSON.parse(paramString)
+    const sheet = getSheet(sheetName.user)
+    const data = sheet.getDataRange().getValues()
 
     // Skip first 3 rows (headers)
     // Columns: A=username(0), B=password(1), C=token(2), D=role(3)
     for (let i = 3; i < data.length; i++) {
       if (data[i][0] === param.username && data[i][1] === param.password) {
-        const role = data[i][3] || 'guest';  // ✅ Column D (index 3) is role
-        const token = data[i][2] || ('token_' + Date.now());  // ✅ Column C (index 2) is token
-        
+        const role = data[i][3] || 'guest' // ✅ Column D (index 3) is role
+        const token = data[i][2] || 'token_' + Date.now() // ✅ Column C (index 2) is token
+
         console.log('Login success:', {
           username: data[i][0],
           role: role,
-          token: token
-        });
-        
+          token: token,
+        })
+
         return {
           username: data[i][0],
           role: role,
-          token: token
-        };
+          token: token,
+        }
       }
     }
 
-    throw new Error('Sai tên đăng nhập hoặc mật khẩu');
+    throw new Error('Sai tên đăng nhập hoặc mật khẩu')
   } catch (error) {
-    console.error('Login error:', error);
-    throw error;
+    console.error('Login error:', error)
+    throw error
   }
 }
 ```
@@ -87,21 +90,21 @@ const checkLogin = async (username: string, password: string) => {
   // ...
   if (res.data.data != '') {
     const userData = res.data.data
-    
+
     // ✅ Validate userData has required fields
     if (!userData.username || !userData.token) {
       init({ message: 'Dữ liệu đăng nhập không hợp lệ', color: 'danger' })
       loading.value = false
       return
     }
-    
+
     // ✅ Check if role exists
     if (!userData.role) {
       init({ message: 'Tài khoản chưa được cấp quyền. Vui lòng liên hệ admin.', color: 'warning' })
       loading.value = false
       return
     }
-    
+
     console.log('[Login] Setting user to store:', userData)
     userStore.setUser(userData)
     // ...
@@ -117,15 +120,15 @@ const checkLogin = async (username: string, password: string) => {
 setUser(user: { username: string; role: string; token: string }) {
   console.log('[UserStore setUser] Received user:', user)
   console.log('[UserStore setUser] User.role:', user.role)
-  
+
   this.userName = user.username
   this.role = user.role || 'guest'  // ✅ Fallback to guest if no role
   this.token = user.token
-  
+
   // Save to localStorage
   const savedData = { username: user.username, role: user.role || 'guest', token: user.token }
   localStorage.setItem('user', JSON.stringify(savedData))
-  
+
   console.log('[UserStore setUser] Store role after update:', this.role)
 }
 ```
