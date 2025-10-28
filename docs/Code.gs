@@ -186,26 +186,138 @@ function login(paramString) {
 function markAttendance(paramString) {
   try {
     const param = JSON.parse(paramString);
-    const sheet = getSheet(sheetName.attendance);
-
-    const rowData = [
-      new Date().toISOString(),
-      param.date || '',
-      param.studentCode || '',
-      param.studentName || '',
-      param.group || '',
-      param.teacher || '',
-      param.subTeacher || '',
-      param.location || '',
-      param.status || '',
-      param.note || ''
-    ];
-
-    sheet.appendRow(rowData);
-    console.log('✅ Điểm danh thành công:', param.studentCode);
+    Logger.log('📝 Mark attendance request: ' + JSON.stringify(param));
     
-    return { success: true, message: 'Điểm danh thành công' };
+    const attendanceCode = param.code || param.calendar?.attendanceCode;
+    const calendar = param.calendar;
+    const studentMarks = param.studentMarks || [];
+    const studentMissings = param.studentMissings || [];
+    
+    if (!attendanceCode) {
+      throw new Error('Attendance code is required');
+    }
+    
+    Logger.log('Attendance code: ' + attendanceCode);
+    Logger.log('Students present: ' + studentMarks.length);
+    Logger.log('Students missing: ' + studentMissings.length);
+    
+    // 1. Ghi danh sách học viên có mặt vào sheet DiemDanhChiTiet
+    if (studentMarks.length > 0) {
+      const detailSheet = getSheet(sheetName.attendanceDetail);
+      if (!detailSheet) {
+        throw new Error('Sheet DiemDanhChiTiet không tồn tại');
+      }
+      
+      studentMarks.forEach(mark => {
+        const rowData = [
+          mark[0], // attendanceCode
+          mark[1], // studentCode
+          mark[2], // studentName
+          mark[3], // date
+          mark[4], // group
+          mark[5] || '', // note
+          new Date().toISOString() // timestamp
+        ];
+        detailSheet.appendRow(rowData);
+      });
+      
+      Logger.log('✅ Đã ghi ' + studentMarks.length + ' học viên có mặt');
+    }
+    
+    // 2. Ghi danh sách học viên vắng mặt vào sheet DiemDanhNghi
+    if (studentMissings.length > 0) {
+      const missingSheet = getSheet(sheetName.attendanceMissing);
+      if (!missingSheet) {
+        throw new Error('Sheet DiemDanhNghi không tồn tại');
+      }
+      
+      studentMissings.forEach(missing => {
+        const rowData = [
+          new Date().toISOString(), // timestamp
+          missing[3] || calendar?.dateTime, // date
+          missing[1], // studentCode
+          missing[2], // studentName
+          missing[4] || calendar?.group, // group
+          missing[5] || '', // reason
+          missing[6] || 'Chưa chăm sóc' // note
+        ];
+        missingSheet.appendRow(rowData);
+      });
+      
+      Logger.log('✅ Đã ghi ' + studentMissings.length + ' học viên vắng mặt');
+    }
+    
+    // 3. Cập nhật attendanceCode vào sheet LichDay
+    if (calendar) {
+      updateStatusCalendar(attendanceCode);
+    }
+    
+    // 4. Ghi summary vào sheet DiemDanh (tổng hợp điểm danh)
+    if (calendar) {
+      const attendanceSheet = getSheet(sheetName.attendance);
+      if (!attendanceSheet) {
+        throw new Error('Sheet DiemDanh không tồn tại');
+      }
+      
+      // Check xem đã tồn tại chưa để tránh duplicate
+      const existingData = attendanceSheet.getDataRange().getValues();
+      const isExist = existingData.some(row => row[0] === attendanceCode);
+      
+      if (isExist) {
+        Logger.log('⚠️ AttendanceCode đã tồn tại trong DiemDanh, skip tạo mới');
+      } else {
+        // Cấu trúc columns: attendanceCode, dateTime, group, teacher, subTeacher, 
+        //                   total, totalMain, totalSub, salary, subSalary, location
+        const summaryRowData = [
+          attendanceCode, // A: attendanceCode
+          calendar.dateTime || '', // B: dateTime
+          calendar.group || '', // C: group
+          calendar.teacher || '', // D: teacher
+          calendar.subTeacher || '' // E: subTeacher
+          // F, G, H, I, J, K sẽ dùng formula
+        ];
+        
+        attendanceSheet.appendRow(summaryRowData);
+        const newRow = attendanceSheet.getLastRow();
+        
+        // Set formulas để tự động tính toán
+        const formulaTeacher = `=IFERROR(VLOOKUP(A${newRow}, ${sheetName.calendar}!A:E, 5, FALSE), "")`;
+        const formulaSubTeacher = `=IFERROR(VLOOKUP(A${newRow}, ${sheetName.calendar}!A:F, 6, FALSE), "")`;
+        const formulaTotalMain = `=IF(A${newRow} <> "", COUNTIFS(DiemDanhChiTiet!A:A, A${newRow}, DiemDanhChiTiet!E:E, C${newRow}), 0)`;
+        const formulaTotalSub = `=IF(A${newRow} <> "", COUNTIFS(DiemDanhChiTiet!A:A, A${newRow}, DiemDanhChiTiet!E:E, "<>"&C${newRow}), 0)`;
+        const formulaTotal = `=SUM(G${newRow}:H${newRow})`;
+        const formulaSalary = `=IF(F${newRow} = 0, 0, IF(F${newRow} <= 12, 150000, IF(F${newRow} <= 14, 170000, 200000)))+IF(K${newRow} = "Gang Thép", 20000, 0)`;
+        const formulaSubSalary = `=IF(E${newRow} <> "", 50000, 0)`;
+        const formulaLocation = `=XLOOKUP(TRIM(C${newRow}), LopHoc!$B$4:$B$100, LopHoc!$A$4:$A$100, "Không tìm thấy")`;
+        
+        // Apply formulas
+        attendanceSheet.getRange(`D${newRow}`).setFormula(formulaTeacher);
+        attendanceSheet.getRange(`E${newRow}`).setFormula(formulaSubTeacher);
+        attendanceSheet.getRange(`G${newRow}`).setFormula(formulaTotalMain);
+        attendanceSheet.getRange(`H${newRow}`).setFormula(formulaTotalSub);
+        attendanceSheet.getRange(`F${newRow}`).setFormula(formulaTotal);
+        attendanceSheet.getRange(`I${newRow}`).setFormula(formulaSalary);
+        attendanceSheet.getRange(`J${newRow}`).setFormula(formulaSubSalary);
+        attendanceSheet.getRange(`K${newRow}`).setFormula(formulaLocation);
+        
+        Logger.log('✅ Đã ghi summary vào DiemDanh với formulas');
+      }
+    }
+    
+    Logger.log('✅ Mark attendance completed successfully');
+    
+    return { 
+      success: true, 
+      message: 'Điểm danh thành công',
+      details: {
+        attendanceCode: attendanceCode,
+        present: studentMarks.length,
+        missing: studentMissings.length
+      }
+    };
+    
   } catch (error) {
+    Logger.log('❌ Mark attendance error: ' + error.toString());
     console.error('Mark attendance error:', error);
     throw error;
   }
@@ -232,41 +344,90 @@ function getMarkedStudents(dataJson) {
 }
 
 /**
- * Cập nhật điểm danh
+ * Cập nhật điểm danh - Xóa dữ liệu cũ và tạo mới
  */
 function updateAttendance(paramString) {
   try {
     const param = JSON.parse(paramString);
-    const sheet = getSheet(sheetName.attendance);
-    const data = sheet.getDataRange().getValues();
+    const code = param.code;
+    
+    Logger.log('🔄 Updating attendance for code: ' + code);
+    
+    // Xóa dữ liệu cũ
+    deleteOldAttendance(code, sheetName.attendanceDetail);
+    deleteOldAttendance(code, sheetName.attendanceMissing);
+    
+    // Tạo lại điểm danh mới
+    markAttendance(paramString);
+    
+    Logger.log('✅ Cập nhật điểm danh thành công');
+    return { success: true, message: 'Cập nhật thành công' };
+  } catch (error) {
+    Logger.log('❌ Update attendance error: ' + error.toString());
+    throw error;
+  }
+}
 
-    // Tìm row cần update (bỏ qua 3 dòng header)
-    for (let i = 3; i < data.length; i++) {
-      if (data[i][1] === param.date && data[i][2] === param.studentCode) {
-        // Update row
-        const rowNumber = i + 1;
-        sheet.getRange(rowNumber, 1, 1, 10).setValues([[
-          data[i][0], // Keep timestamp
-          param.date || data[i][1],
-          param.studentCode || data[i][2],
-          param.studentName || data[i][3],
-          param.group || data[i][4],
-          param.teacher || data[i][5],
-          param.subTeacher || data[i][6],
-          param.location || data[i][7],
-          param.status || data[i][8],
-          param.note || data[i][9]
-        ]]);
-        
-        console.log('✅ Cập nhật điểm danh thành công:', param.studentCode);
-        return { success: true, message: 'Cập nhật thành công' };
+/**
+ * Xóa dữ liệu điểm danh cũ
+ */
+function deleteOldAttendance(code, nameSheet) {
+  try {
+    const sheet = getSheet(nameSheet);
+    if (!sheet) {
+      Logger.log('⚠️ Sheet not found: ' + nameSheet);
+      return;
+    }
+    
+    const data = sheet.getDataRange().getValues();
+    const rowsToDelete = [];
+    
+    // Tìm tất cả rows có attendanceCode trùng (bỏ qua 2 dòng header)
+    for (let i = data.length - 1; i >= 2; i--) {
+      if (data[i][0] === code) {
+        rowsToDelete.push(i + 1); // Convert to 1-based index
       }
     }
-
-    throw new Error('Không tìm thấy bản ghi điểm danh');
+    
+    // Xóa từ cuối lên đầu để tránh lỗi index
+    rowsToDelete.forEach(rowIndex => {
+      sheet.deleteRow(rowIndex);
+    });
+    
+    Logger.log('🗑️ Deleted ' + rowsToDelete.length + ' rows from ' + nameSheet);
   } catch (error) {
-    console.error('Update attendance error:', error);
-    throw error;
+    Logger.log('❌ Delete old attendance error: ' + error.toString());
+  }
+}
+
+/**
+ * Cập nhật attendanceCode vào LichDay (đánh dấu đã điểm danh)
+ */
+function updateStatusCalendar(attendanceCode) {
+  try {
+    const calendarSheet = getSheet(sheetName.calendar);
+    if (!calendarSheet) {
+      throw new Error('Sheet LichDay không tồn tại');
+    }
+    
+    const calendarData = calendarSheet.getDataRange().getValues();
+    
+    // Tìm row có attendanceCode trùng và update status (cột 11) = '1'
+    for (let i = 0; i < calendarData.length; i++) {
+      const rowCode = String(calendarData[i][0]).trim();
+      
+      if (rowCode === attendanceCode) {
+        const rowNumber = i + 1;
+        // Update cột 11 (status) = '1' để đánh dấu đã điểm danh
+        calendarSheet.getRange(rowNumber, 11).setValue('1');
+        Logger.log('✅ Đã cập nhật status calendar row ' + rowNumber + ' = "1"');
+        return calendarData[i];
+      }
+    }
+    
+    Logger.log('⚠️ Không tìm thấy calendar với code: ' + attendanceCode);
+  } catch (error) {
+    Logger.log('❌ Update status calendar error: ' + error.toString());
   }
 }
 
@@ -288,39 +449,42 @@ function changeTeacherOfCalendar(paramString) {
     const data = sheet.getDataRange().getValues();
     Logger.log('📊 Total rows in calendar sheet: ' + data.length);
 
-    // Skip first 2 rows (row 1: title, row 2: headers)
-    // Data starts from row 3 (index 2)
-    // Columns: A=attendanceCode(0), B=date(1), C=time(2), D=group(3), E=teacher(4), F=subTeacher(5)
-    for (let i = 2; i < data.length; i++) {
-      const rowAttendanceCode = String(data[i][0]).trim();
-      const rowDate = String(data[i][1]).trim();
-      const rowGroup = String(data[i][3]).trim();
+    // Logic cũ: param là array [code, teacher, subTeacher]
+    let code, teacher, subTeacher;
+    
+    if (Array.isArray(param)) {
+      // Array format từ logic cũ
+      code = param[0];
+      teacher = param[1];
+      subTeacher = param[2];
+    } else {
+      // Object format từ frontend mới
+      code = param.attendanceCode || param.code;
+      teacher = param.teacher;
+      subTeacher = param.subTeacher;
+    }
+    
+    Logger.log('Searching for code: ' + code);
+
+    // Tìm row theo attendanceCode (cột A = cột 0)
+    for (let i = 0; i < data.length; i++) {
+      const rowCode = String(data[i][0]).trim();
       
-      Logger.log('Checking row ' + (i+1) + ': attendanceCode=' + rowAttendanceCode + ', date=' + rowDate + ', group=' + rowGroup);
-      
-      // So sánh theo attendanceCode HOẶC (date + group)
-      const matchByCode = param.attendanceCode && rowAttendanceCode === String(param.attendanceCode).trim();
-      const matchByDateGroup = param.date && param.group && 
-                                rowDate === String(param.date).trim() && 
-                                rowGroup === String(param.group).trim();
-      
-      if (matchByCode || matchByDateGroup) {
+      if (rowCode === code) {
         Logger.log('✅ Match found at row ' + (i+1));
         
         const rowNumber = i + 1;
-        const newTeacher = param.teacher || data[i][4];
-        const newSubTeacher = param.subTeacher || data[i][5];
         
-        // Update columns E (teacher) and F (subTeacher)
-        sheet.getRange(rowNumber, 5, 1, 2).setValues([[newTeacher, newSubTeacher]]);
+        // Update columns 5 (teacher) and 6 (subTeacher)
+        sheet.getRange(rowNumber, 5).setValue(teacher);
+        sheet.getRange(rowNumber, 6).setValue(subTeacher);
         
-        Logger.log('✅ Teacher changed successfully to: ' + newTeacher + ' / ' + newSubTeacher);
-        return { success: true, message: 'Đổi giáo viên thành công' };
+        Logger.log('✅ Teacher changed successfully to: ' + teacher + ' / ' + subTeacher);
+        return data[i];
       }
     }
 
-    Logger.log('❌ No matching calendar found');
-    Logger.log('Searched for: attendanceCode=' + param.attendanceCode + ', date=' + param.date + ', group=' + param.group);
+    Logger.log('❌ No matching calendar found for code: ' + code);
     throw new Error('Không tìm thấy lịch dạy');
   } catch (error) {
     Logger.log('❌ Change teacher error: ' + error.toString());
@@ -329,29 +493,47 @@ function changeTeacherOfCalendar(paramString) {
 }
 
 /**
- * Cập nhật học viên nghỉ
+ * Cập nhật thông tin học viên nghỉ (chăm sóc)
  */
 function updateStudentMissing(paramString) {
   try {
     const param = JSON.parse(paramString);
-    const sheet = getSheet(sheetName.attendanceMissing);
-
-    const rowData = [
-      new Date().toISOString(),
-      param.date || '',
-      param.studentCode || '',
-      param.studentName || '',
-      param.group || '',
-      param.reason || '',
-      param.note || ''
-    ];
-
-    sheet.appendRow(rowData);
-    console.log('✅ Ghi nhận nghỉ học:', param.studentCode);
+    Logger.log('🔄 Updating student missing: ' + JSON.stringify(param));
     
-    return { success: true, message: 'Ghi nhận nghỉ học thành công' };
+    const sheet = getSheet(sheetName.attendanceMissing);
+    if (!sheet) {
+      throw new Error('Sheet DiemDanhNghi không tồn tại');
+    }
+    
+    const data = sheet.getDataRange().getValues();
+    
+    // Tìm row cần update
+    // Logic cũ: data[i][0]=attendanceCode && data[i][1]=studentCode
+    // Columns: attendanceCode(0), studentCode(1), ..., status(6), note(7)
+    for (let i = 0; i < data.length; i++) {
+      const rowAttendanceCode = String(data[i][0]).trim();
+      const rowStudentCode = String(data[i][1]).trim();
+      
+      if (rowAttendanceCode === param.attendanceCode && rowStudentCode === param.studentCode) {
+        const rowNumber = i + 1;
+        
+        // Update status (column 7) và note (column 8) theo logic cũ
+        if (param.status) {
+          sheet.getRange(rowNumber, 7).setValue(param.status);
+        }
+        if (param.note !== undefined) {
+          sheet.getRange(rowNumber, 8).setValue(param.note);
+        }
+        
+        Logger.log('✅ Cập nhật học viên nghỉ thành công');
+        return data[i];
+      }
+    }
+
+    Logger.log('❌ Không tìm thấy bản ghi học viên nghỉ');
+    throw new Error('Không tìm thấy bản ghi học viên nghỉ');
   } catch (error) {
-    console.error('Update student missing error:', error);
+    Logger.log('❌ Update student missing error: ' + error.toString());
     throw error;
   }
 }
@@ -366,24 +548,29 @@ function createCalendars(paramString) {
     const calendars = Array.isArray(param) ? param : [param];
 
     calendars.forEach(cal => {
+      // Cấu trúc theo logic cũ: 11 cột
+      // attendanceCode, dateTime, location, group, teacher, subTeacher, 
+      // startTime, endTime, attendanceTime, note, status
       const rowData = [
-        cal.id || new Date().getTime().toString(),
-        cal.date || '',
-        cal.time || '',
+        cal.attendanceCode || '',
+        cal.dateTime || '',
+        cal.location || '',
         cal.group || '',
         cal.teacher || '',
         cal.subTeacher || '',
-        cal.location || '',
-        cal.status || 'scheduled',
-        cal.note || ''
+        cal.startTime || '',
+        cal.endTime || '',
+        cal.attendanceTime || '',
+        cal.note || '',
+        cal.status || ''
       ];
       sheet.appendRow(rowData);
     });
 
-    console.log('✅ Tạo lịch dạy thành công:', calendars.length, 'lịch');
-    return { success: true, message: 'Tạo lịch thành công', count: calendars.length };
+    Logger.log('✅ Tạo lịch dạy thành công:', calendars.length, 'lịch');
+    return calendars;
   } catch (error) {
-    console.error('Create calendars error:', error);
+    Logger.log('❌ Create calendars error: ' + error.toString());
     throw error;
   }
 }
@@ -396,24 +583,24 @@ function createPayment(paramString) {
     const param = JSON.parse(paramString);
     const sheet = getSheet(sheetName.payment);
 
+    // Cấu trúc theo logic cũ: 7 cột
+    // studentCode, studentName, datePayment, type, money, lesson, note
     const rowData = [
-      new Date().toISOString(),
       param.studentCode || '',
       param.studentName || '',
-      param.amount || 0,
-      param.lessons || 0,
-      param.startDate || '',
-      param.endDate || '',
-      param.paymentMethod || '',
+      param.datePayment || '',
+      param.type || '',
+      param.money || '',
+      param.lesson || '',
       param.note || ''
     ];
 
     sheet.appendRow(rowData);
-    console.log('✅ Đóng học thành công:', param.studentCode);
+    Logger.log('✅ Đóng học thành công:', param.studentCode);
     
-    return { success: true, message: 'Đóng học thành công' };
+    return rowData;
   } catch (error) {
-    console.error('Create payment error:', error);
+    Logger.log('❌ Create payment error: ' + error.toString());
     throw error;
   }
 }
@@ -588,21 +775,22 @@ function updateLesson(paramString) {
     const param = JSON.parse(paramString);
     const sheet = getSheet(sheetName.lessonUpdate);
 
+    // Cấu trúc theo logic cũ: 5 cột
+    // studentCode, studentName, datePayment, lesson, note
     const rowData = [
-      new Date().toISOString(),
       param.studentCode || '',
       param.studentName || '',
-      param.adjustment || 0,
-      param.reason || '',
+      param.datePayment || '',
+      param.lesson || 0,
       param.note || ''
     ];
 
     sheet.appendRow(rowData);
-    console.log('✅ Điều chỉnh buổi học:', param.studentCode);
+    Logger.log('✅ Điều chỉnh buổi học:', param.studentCode);
     
-    return { success: true, message: 'Điều chỉnh thành công' };
+    return rowData;
   } catch (error) {
-    console.error('Update lesson error:', error);
+    Logger.log('❌ Update lesson error: ' + error.toString());
     throw error;
   }
 }
@@ -615,24 +803,78 @@ function newStudent(paramString) {
     const param = JSON.parse(paramString);
     const sheet = getSheet(sheetName.student);
 
+    // Cấu trúc theo logic cũ: 11 cột
+    // code, location, fullname, nickname, group, gender, birthday, 
+    // phoneNumber, dateStart, status, note
     const rowData = [
       param.code || '',
-      param.fullname || '',
-      param.phone || '',
-      param.group || '',
       param.location || '',
+      param.fullname || '',
+      param.nickname || '',
+      param.group || '',
+      param.gender || '',
+      param.birthday || '',
+      param.phoneNumber || param.phone || '',
+      param.dateStart || '',
       param.status || 'active',
-      new Date().toISOString(),
       param.note || ''
     ];
 
     sheet.appendRow(rowData);
-    console.log('✅ Thêm học viên mới:', param.code);
+    Logger.log('✅ Thêm học viên mới:', param.code);
     
-    return { success: true, message: 'Thêm học viên thành công' };
+    // Tạo student follow
+    createStudentFollow(param);
+    
+    return rowData;
   } catch (error) {
-    console.error('New student error:', error);
+    Logger.log('❌ New student error: ' + error.toString());
     throw error;
+  }
+}
+
+/**
+ * Tạo student follow (theo dõi học viên)
+ */
+function createStudentFollow(student) {
+  try {
+    const sheet = getSheet(sheetName.studentFollow);
+    if (!sheet) {
+      Logger.log('⚠️ Sheet KiemSoatBuoiHoc không tồn tại');
+      return;
+    }
+    
+    const data = sheet.getDataRange().getValues();
+    const isExist = data.some(row => row[0] === student.code);
+    
+    if (isExist) {
+      Logger.log('⚠️ Student follow đã tồn tại: ' + student.code);
+      return;
+    }
+    
+    const studentFollow = [student.code];
+    sheet.appendRow(studentFollow);
+    
+    const newRow = sheet.getLastRow();
+    
+    // Set formulas theo logic cũ
+    const formulaFullName = `=IFERROR(VLOOKUP(A${newRow}, ${sheetName.student}!A:C, 3, FALSE), "")`;
+    const formulaGroup = `=IFERROR(VLOOKUP(A${newRow}, ${sheetName.student}!A:E, 5, FALSE), "")`;
+    const formulaDongHoc = `=COUNTIF(${sheetName.payment}!A:A, A${newRow})`;
+    const formulaTong = `=ARRAYFORMULA(SUMIFS(${sheetName.payment}!$F$4:F, ${sheetName.payment}!$A$4:A, A${newRow}) + SUMIFS(${sheetName.lessonUpdate}!$D$4:D, ${sheetName.lessonUpdate}!$A$4:A, A${newRow}))`;
+    const formulaDaHoc = `=COUNTIF(${sheetName.attendanceDetail}!B:B, A${newRow})`;
+    const formulaConLai = `=E${newRow}-F${newRow}`;
+    
+    sheet.getRange(`B${newRow}`).setFormula(formulaFullName);
+    sheet.getRange(`C${newRow}`).setFormula(formulaGroup);
+    sheet.getRange(`D${newRow}`).setFormula(formulaDongHoc);
+    sheet.getRange(`E${newRow}`).setFormula(formulaTong);
+    sheet.getRange(`F${newRow}`).setFormula(formulaDaHoc);
+    sheet.getRange(`G${newRow}`).setFormula(formulaConLai);
+    
+    Logger.log('✅ Tạo student follow thành công');
+  } catch (error) {
+    Logger.log('❌ Create student follow error: ' + error.toString());
   }
 }
 
@@ -645,28 +887,46 @@ function updateStudent(paramString) {
     const sheet = getSheet(sheetName.student);
     const data = sheet.getDataRange().getValues();
 
-    for (let i = 3; i < data.length; i++) {
+    // Cấu trúc theo logic cũ: 11 cột
+    // code, location, fullname, nickname, group, gender, birthday, 
+    // phoneNumber, dateStart, status, note
+    const student = [
+      param.code || '',
+      param.location || '',
+      param.fullname || '',
+      param.nickname || '',
+      param.group || '',
+      param.gender || '',
+      param.birthday || '',
+      param.phoneNumber || param.phone || '',
+      param.dateStart || '',
+      param.status || 'active',
+      param.note || ''
+    ];
+
+    // Tìm row theo code
+    let rowIndex = -1;
+    for (let i = 0; i < data.length; i++) {
       if (data[i][0] === param.code) {
-        const rowNumber = i + 1;
-        sheet.getRange(rowNumber, 1, 1, 8).setValues([[
-          param.code,
-          param.fullname || data[i][1],
-          param.phone || data[i][2],
-          param.group || data[i][3],
-          param.location || data[i][4],
-          param.status || data[i][5],
-          data[i][6], // Keep enroll date
-          param.note || data[i][7]
-        ]]);
-        
-        console.log('✅ Cập nhật học viên:', param.code);
-        return { success: true, message: 'Cập nhật thành công' };
+        rowIndex = i + 1; // Convert to 1-based index
+        break;
       }
     }
 
-    throw new Error('Không tìm thấy học viên');
+    if (rowIndex > -1) {
+      // Cập nhật row
+      const range = sheet.getRange(rowIndex, 1, 1, student.length);
+      range.setValues([student]);
+      Logger.log('✅ Cập nhật học viên:', param.code);
+    } else {
+      // Nếu không tìm thấy, thêm mới
+      sheet.appendRow(student);
+      Logger.log('✅ Thêm học viên mới (không tìm thấy):', param.code);
+    }
+    
+    return student;
   } catch (error) {
-    console.error('Update student error:', error);
+    Logger.log('❌ Update student error: ' + error.toString());
     throw error;
   }
 }

@@ -117,9 +117,9 @@ const payment: any = {
   studentCode: student.value.code,
   studentName: student.value.fullname,
   datePayment: formatDate(todayDate),
-  type: '',
-  money: '',
-  lesson: '',
+  type: '', // Đóng theo khoá / Đóng gói lẻ
+  money: '', // Số tiền (cho payment)
+  lesson: '', // Số buổi học
   note: '',
 }
 
