@@ -102,13 +102,14 @@ const props = defineProps<{
   studentToUpdate: any
   locations: any
   groups: any
-  students: any
+  students: any // Giữ lại cho tương lai (có thể dùng để validate duplicate ở frontend)
 }>()
 
 const student = ref(props.studentToUpdate)
 const locations = ref(props.locations)
 const groups = ref(props.groups)
-const students = ref(props.students)
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const students = ref(props.students) // Backend sẽ generate code, không dùng ở frontend nữa
 
 const today = new Date()
 const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate())
@@ -140,13 +141,15 @@ const groupOptions = computed(() => {
   return groups.value ? uniqueGroups : []
 })
 
-const generateStudentCode = () => {
-  const textLocation = getTextByValue(locationOptions, newStudent.value.location)
-  const codeList = students.value.filter((item: any) => item.location == textLocation)
-  return students.value
-    ? newStudent.value.location + (codeList.length + 1)
-    : newStudent.value.location + Math.floor(Math.random() * 1000)
-}
+// ❌ DEPRECATED: Không dùng frontend generate code nữa
+// Backend sẽ tự động generate studentCode với logic an toàn hơn
+// const generateStudentCode = () => {
+//   const textLocation = getTextByValue(locationOptions, newStudent.value.location)
+//   const codeList = students.value.filter((item: any) => item.location == textLocation)
+//   return students.value
+//     ? newStudent.value.location + (codeList.length + 1)
+//     : newStudent.value.location + Math.floor(Math.random() * 1000)
+// }
 
 const defaultNewStudent: any = {
   code: student.value?.code ?? '',
@@ -196,13 +199,15 @@ const onSave = () => {
   newStudent.value.gender = getTextByValue(genderOptions, newStudent.value.gender)
   newStudent.value.birthday = formatDate(newStudent.value.birthday)
   newStudent.value.dateStart = formatDate(newStudent.value.dateStart)
+  newStudent.value.location = getTextByValue(locationOptions, newStudent.value.location)
+
   if (!student.value) {
-    const code = generateStudentCode()
-    newStudent.value.code = code
-    newStudent.value.location = getTextByValue(locationOptions, newStudent.value.location)
+    // ✅ Để backend tự động generate studentCode
+    // Không cần gọi generateStudentCode() nữa
+    newStudent.value.code = '' // Backend sẽ tạo code tự động
     emit('save', newStudent.value)
   } else {
-    newStudent.value.location = getTextByValue(locationOptions, newStudent.value.location)
+    // Khi update, giữ nguyên code cũ
     emit('update', newStudent.value)
   }
 }

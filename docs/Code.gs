@@ -828,18 +828,83 @@ function updateLesson(paramString) {
 }
 
 /**
+ * Tạo studentCode tự động dựa trên location
+ * Format: {locationCode}{number} (GT001, GT002, ...)
+ */
+function generateStudentCode(location) {
+  try {
+    const sheet = getSheet(sheetName.student);
+    const data = sheet.getDataRange().getValues();
+    
+    Logger.log('📝 Generating student code for location: ' + location);
+    
+    // Lọc học viên theo location (bỏ qua 2 dòng header)
+    const locationStudents = data.filter((row, index) => 
+      index > 1 && String(row[1]).trim() === String(location).trim()
+    );
+    
+    Logger.log('  - Found ' + locationStudents.length + ' students at this location');
+    
+    // Tìm số lớn nhất trong các studentCode
+    let maxNumber = 0;
+    locationStudents.forEach(row => {
+      const code = String(row[0]).trim(); // Column A = studentCode
+      const match = code.match(/\d+$/); // Extract số ở cuối string
+      if (match) {
+        const num = parseInt(match[0], 10);
+        if (num > maxNumber) {
+          maxNumber = num;
+        }
+      }
+    });
+    
+    Logger.log('  - Max number found: ' + maxNumber);
+    
+    // Tạo code mới với padding 3 chữ số
+    const newNumber = (maxNumber + 1).toString().padStart(3, '0');
+    const newCode = location + newNumber;
+    
+    Logger.log('  ✅ Generated new code: ' + newCode);
+    
+    return newCode;
+  } catch (error) {
+    Logger.log('❌ Generate student code error: ' + error.toString());
+    // Fallback: dùng timestamp nếu có lỗi
+    return location + Date.now().toString().slice(-6);
+  }
+}
+
+/**
  * Thêm học viên mới
  */
 function newStudent(paramString) {
   try {
     const param = safeJSONParse(paramString);
     const sheet = getSheet(sheetName.student);
+    
+    // ✅ AUTO-GENERATE CODE: Nếu frontend không gửi code hoặc code rỗng
+    let studentCode = param.code;
+    if (!studentCode || studentCode.trim() === '') {
+      studentCode = generateStudentCode(param.location);
+      Logger.log('🔄 Auto-generated student code: ' + studentCode);
+    }
+    
+    // ✅ CHECK TRÙNG: Kiểm tra xem studentCode đã tồn tại chưa
+    const existingData = sheet.getDataRange().getValues();
+    const isDuplicate = existingData.some((row, index) => 
+      index > 1 && String(row[0]).trim() === String(studentCode).trim()
+    );
+    
+    if (isDuplicate) {
+      Logger.log('❌ Student code already exists: ' + studentCode);
+      throw new Error('Mã học viên "' + studentCode + '" đã tồn tại. Vui lòng sử dụng mã khác.');
+    }
 
     // Cấu trúc theo logic cũ: 11 cột
     // code, location, fullname, nickname, group, gender, birthday, 
     // phoneNumber, dateStart, status, note
     const rowData = [
-      param.code || '',
+      studentCode,  // ✅ Sử dụng code đã generate hoặc từ frontend
       param.location || '',
       param.fullname || '',
       param.nickname || '',
@@ -853,12 +918,13 @@ function newStudent(paramString) {
     ];
 
     sheet.appendRow(rowData);
-    Logger.log('✅ Thêm học viên mới:', param.code);
+    Logger.log('✅ Thêm học viên mới: ' + studentCode);
     
     // Tạo student follow
+    param.code = studentCode; // Update code cho createStudentFollow
     createStudentFollow(param);
     
-    return rowData;
+    return { ...param, code: studentCode }; // ✅ Trả về code đã tạo
   } catch (error) {
     Logger.log('❌ New student error: ' + error.toString());
     throw error;
@@ -877,7 +943,11 @@ function createStudentFollow(student) {
     }
     
     const data = sheet.getDataRange().getValues();
-    const isExist = data.some(row => row[0] === student.code);
+    
+    // Check trùng với trim và so sánh loose (== giống logic cũ)
+    const isExist = data.some((row, index) => 
+      index > 1 && String(row[0]).trim() == String(student.code).trim()
+    );
     
     if (isExist) {
       Logger.log('⚠️ Student follow đã tồn tại: ' + student.code);
