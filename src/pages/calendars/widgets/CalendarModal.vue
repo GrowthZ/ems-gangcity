@@ -151,7 +151,11 @@ const props = defineProps({
 })
 
 const calendarOptions = computed(() => {
-  return props.calendars.map((calendar) => calendar.attendanceCode)
+  // Chỉ lấy lịch chưa điểm danh (status = 0 hoặc '' hoặc null) để check trùng lặp
+  // Vì lịch đã điểm danh (status = 1) không cần check trùng
+  return props.calendars
+    .filter((calendar) => !calendar.status || calendar.status === 0 || calendar.status === '0')
+    .map((calendar) => calendar.attendanceCode)
 })
 
 const teacherOptions = computed(() => {
@@ -180,9 +184,13 @@ const selectedDate = ref(new Date().toISOString().substr(0, 10))
 const selectedDateConvert = ref('')
 
 const today = new Date()
-const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate())
-const startDate = ref(todayDate)
-const endDate = ref(todayDate)
+// Ngày đầu tháng hiện tại
+const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1)
+// Ngày cuối tháng hiện tại (ngày 0 của tháng sau = ngày cuối tháng hiện tại)
+const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0)
+
+const startDate = ref(firstDayOfMonth)
+const endDate = ref(lastDayOfMonth)
 const isReview = ref(false)
 
 const selection = ref([])
@@ -312,8 +320,28 @@ const isValid = computed(() => {
 
 const checkExistCalendar = computed(() => {
   const newAttendanceCode = getDaysInRange(startDate.value, endDate.value).map((day) => day.attendanceCode)
-  const matchFound =
-    newAttendanceCode.length == 0 || calendarOptions.value.some((code) => newAttendanceCode.includes(code))
+
+  // Debug info
+  console.log('🔍 Check duplicate calendar:')
+  console.log('  - New attendance codes:', newAttendanceCode.length, 'items')
+  console.log('  - Existing calendars (unattended):', calendarOptions.value.length, 'items')
+
+  // Nếu không có lịch mới → không trùng lặp
+  if (newAttendanceCode.length === 0) {
+    console.log('  ✅ No new calendars to create')
+    return false
+  }
+
+  // Check xem có attendanceCode nào trùng với lịch đã tồn tại không
+  const duplicates = newAttendanceCode.filter((code) => calendarOptions.value.includes(code))
+  const matchFound = duplicates.length > 0
+
+  if (matchFound) {
+    console.log('  ❌ Found duplicates:', duplicates)
+  } else {
+    console.log('  ✅ No duplicates found')
+  }
+
   return matchFound
 })
 // const newCalendar = ref(defaultNewCalendar)

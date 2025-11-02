@@ -113,6 +113,30 @@ function getSheet(name) {
   return sheetData.getSheetByName(name);
 }
 
+/**
+ * Safe JSON parsing - Xử lý cả string thuần và JSON string
+ */
+function safeJSONParse(dataString) {
+  // Nếu đã là object rồi, return luôn
+  if (typeof dataString === 'object' && dataString !== null) {
+    return dataString;
+  }
+  
+  // Nếu là string, thử parse
+  if (typeof dataString === 'string') {
+    try {
+      return JSON.parse(dataString);
+    } catch (e) {
+      // Nếu parse lỗi, coi như string thuần và return nguyên bản
+      Logger.log('⚠️ JSON parse failed, treating as plain string: ' + e.toString());
+      return dataString;
+    }
+  }
+  
+  // Các trường hợp khác (undefined, null, number, etc.)
+  return dataString;
+}
+
 // ============================================
 // ACTION HANDLERS - GHI/CẬP NHẬT DỮ LIỆU
 // ============================================
@@ -122,7 +146,7 @@ function getSheet(name) {
  */
 function login(paramString) {
   try {
-    const param = JSON.parse(paramString);
+    const param = safeJSONParse(paramString);
     Logger.log('🔐 Login attempt for username: ' + param.username);
     
     const sheet = getSheet(sheetName.user);
@@ -185,7 +209,7 @@ function login(paramString) {
  */
 function markAttendance(paramString) {
   try {
-    const param = JSON.parse(paramString);
+    const param = safeJSONParse(paramString);
     Logger.log('📝 Mark attendance request: ' + JSON.stringify(param));
     
     const attendanceCode = param.code || param.calendar?.attendanceCode;
@@ -328,17 +352,25 @@ function markAttendance(paramString) {
  */
 function getMarkedStudents(dataJson) {
   try {
-    const code = JSON.parse(dataJson);
+    // Parse safely - có thể nhận string thuần hoặc JSON string
+    const code = safeJSONParse(dataJson);
+    
+    Logger.log('📋 Getting marked students for code: ' + code);
+    
     const sheet = getSheet(sheetName.attendanceDetail);
+    if (!sheet) {
+      throw new Error('Sheet DiemDanhChiTiet không tồn tại');
+    }
+    
     const data = sheet.getDataRange().getValues();
     
-    // Filter rows with matching attendance code (bỏ qua header)
-    const rowAttendanced = data.filter((row, index) => index > 2 && row[0] === code);
+    // Filter rows with matching attendance code (bỏ qua 2 dòng header)
+    const rowAttendanced = data.filter((row, index) => index > 1 && String(row[0]).trim() === String(code).trim());
     
-    console.log('✅ Found marked students:', rowAttendanced.length, 'for code:', code);
+    Logger.log('✅ Found ' + rowAttendanced.length + ' marked students for code: ' + code);
     return rowAttendanced;
   } catch (error) {
-    console.error('Get marked students error:', error);
+    Logger.log('❌ Get marked students error: ' + error.toString());
     throw error;
   }
 }
@@ -348,7 +380,7 @@ function getMarkedStudents(dataJson) {
  */
 function updateAttendance(paramString) {
   try {
-    const param = JSON.parse(paramString);
+    const param = safeJSONParse(paramString);
     const code = param.code;
     
     Logger.log('🔄 Updating attendance for code: ' + code);
@@ -436,7 +468,7 @@ function updateStatusCalendar(attendanceCode) {
  */
 function changeTeacherOfCalendar(paramString) {
   try {
-    const param = JSON.parse(paramString);
+    const param = safeJSONParse(paramString);
     Logger.log('🔄 Changing teacher for calendar: ' + JSON.stringify(param));
     
     const sheet = getSheet(sheetName.calendar);
@@ -497,7 +529,7 @@ function changeTeacherOfCalendar(paramString) {
  */
 function updateStudentMissing(paramString) {
   try {
-    const param = JSON.parse(paramString);
+    const param = safeJSONParse(paramString);
     Logger.log('🔄 Updating student missing: ' + JSON.stringify(param));
     
     const sheet = getSheet(sheetName.attendanceMissing);
@@ -543,7 +575,7 @@ function updateStudentMissing(paramString) {
  */
 function createCalendars(paramString) {
   try {
-    const param = JSON.parse(paramString);
+    const param = safeJSONParse(paramString);
     const sheet = getSheet(sheetName.calendar);
     const calendars = Array.isArray(param) ? param : [param];
 
@@ -580,7 +612,7 @@ function createCalendars(paramString) {
  */
 function createPayment(paramString) {
   try {
-    const param = JSON.parse(paramString);
+    const param = safeJSONParse(paramString);
     const sheet = getSheet(sheetName.payment);
 
     // Cấu trúc theo logic cũ: 7 cột
@@ -610,7 +642,7 @@ function createPayment(paramString) {
  */
 function updatePayment(paramString) {
   try {
-    const param = JSON.parse(paramString);
+    const param = safeJSONParse(paramString);
     Logger.log('📝 Updating payment for: ' + param.studentCode);
     
     const sheet = getSheet(sheetName.payment);
@@ -699,7 +731,7 @@ function updatePayment(paramString) {
  */
 function deletePayment(paramString) {
   try {
-    const param = JSON.parse(paramString);
+    const param = safeJSONParse(paramString);
     Logger.log('🗑️ Deleting payment for: ' + param.studentCode);
     
     const sheet = getSheet(sheetName.payment);
@@ -772,7 +804,7 @@ function deletePayment(paramString) {
  */
 function updateLesson(paramString) {
   try {
-    const param = JSON.parse(paramString);
+    const param = safeJSONParse(paramString);
     const sheet = getSheet(sheetName.lessonUpdate);
 
     // Cấu trúc theo logic cũ: 5 cột
@@ -800,7 +832,7 @@ function updateLesson(paramString) {
  */
 function newStudent(paramString) {
   try {
-    const param = JSON.parse(paramString);
+    const param = safeJSONParse(paramString);
     const sheet = getSheet(sheetName.student);
 
     // Cấu trúc theo logic cũ: 11 cột
@@ -883,7 +915,7 @@ function createStudentFollow(student) {
  */
 function updateStudent(paramString) {
   try {
-    const param = JSON.parse(paramString);
+    const param = safeJSONParse(paramString);
     const sheet = getSheet(sheetName.student);
     const data = sheet.getDataRange().getValues();
 
@@ -936,7 +968,7 @@ function updateStudent(paramString) {
  */
 function updateStudentByMonth(paramString) {
   try {
-    const param = JSON.parse(paramString);
+    const param = safeJSONParse(paramString);
     const sheet = getSheet(sheetName.studentMonthUpdate);
     const dataArray = param.data || [param];
 
