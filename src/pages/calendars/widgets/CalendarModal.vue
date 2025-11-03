@@ -153,9 +153,18 @@ const props = defineProps({
 const calendarOptions = computed(() => {
   // Chỉ lấy lịch chưa điểm danh (status = 0 hoặc '' hoặc null) để check trùng lặp
   // Vì lịch đã điểm danh (status = 1) không cần check trùng
-  return props.calendars
-    .filter((calendar) => !calendar.status || calendar.status === 0 || calendar.status === '0')
-    .map((calendar) => calendar.attendanceCode)
+  const unattendedCalendars = props.calendars.filter(
+    (calendar) => !calendar.status || calendar.status === 0 || calendar.status === '0',
+  )
+
+  // Debug: Log các lịch chưa điểm danh
+  console.log('📋 Unattended calendars:', unattendedCalendars.length, 'items')
+  const break6Calendars = unattendedCalendars.filter((cal) => cal.group === 'Break6')
+  if (break6Calendars.length > 0) {
+    console.log('⚠️ Found Break6 unattended calendars:', break6Calendars)
+  }
+
+  return unattendedCalendars.map((calendar) => calendar.attendanceCode)
 })
 
 const teacherOptions = computed(() => {
@@ -323,7 +332,12 @@ const checkExistCalendar = computed(() => {
 
   // Debug info
   console.log('🔍 Check duplicate calendar:')
+  console.log('  - Selected group:', selectedGroup.value)
+  console.log('  - Date range:', startDate.value, 'to', endDate.value)
   console.log('  - New attendance codes:', newAttendanceCode.length, 'items')
+  if (newAttendanceCode.length > 0) {
+    console.log('  - Sample new code:', newAttendanceCode[0])
+  }
   console.log('  - Existing calendars (unattended):', calendarOptions.value.length, 'items')
 
   // Nếu không có lịch mới → không trùng lặp
@@ -338,6 +352,9 @@ const checkExistCalendar = computed(() => {
 
   if (matchFound) {
     console.log('  ❌ Found duplicates:', duplicates)
+    // Tìm xem lịch trùng là của ngày nào
+    const duplicateCalendars = props.calendars.filter((cal) => duplicates.includes(cal.attendanceCode))
+    console.log('  ❌ Duplicate calendar details:', duplicateCalendars)
   } else {
     console.log('  ✅ No duplicates found')
   }
