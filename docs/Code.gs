@@ -608,6 +608,56 @@ function createCalendars(paramString) {
 }
 
 /**
+ * Generate payment ID - gd0001, gd0002, ...
+ */
+function generatePaymentId() {
+  try {
+    const sheet = getSheet(sheetName.payment);
+    const data = sheet.getDataRange().getValues();
+    
+    Logger.log('📝 Generating payment ID');
+    
+    // Find ID column (assume it's the last column with header 'id')
+    const headerRow = 2; // Index 2 = row 3
+    const headers = data[headerRow];
+    const idCol = headers.indexOf('id');
+    
+    if (idCol === -1) {
+      Logger.log('⚠️ ID column not found, using default gd0001');
+      return 'gd0001';
+    }
+    
+    let maxNumber = 0;
+    
+    // Find max number in existing IDs (skip header rows)
+    for (let i = headerRow + 1; i < data.length; i++) {
+      const id = String(data[i][idCol]).trim();
+      const match = id.match(/^gd(\d+)$/i); // Match gd0001, GD0001, etc.
+      if (match) {
+        const num = parseInt(match[1], 10);
+        if (num > maxNumber) {
+          maxNumber = num;
+        }
+      }
+    }
+    
+    Logger.log('  - Max ID number found: ' + maxNumber);
+    
+    // Generate new ID with padding 4 digits
+    const newNumber = (maxNumber + 1).toString().padStart(4, '0');
+    const newId = 'gd' + newNumber;
+    
+    Logger.log('  ✅ Generated new ID: ' + newId);
+    
+    return newId;
+  } catch (error) {
+    Logger.log('❌ Generate payment ID error: ' + error.toString());
+    // Fallback: use timestamp
+    return 'gd' + Date.now().toString().slice(-8);
+  }
+}
+
+/**
  * Đóng học - Create payment
  */
 function createPayment(paramString) {
@@ -615,8 +665,11 @@ function createPayment(paramString) {
     const param = safeJSONParse(paramString);
     const sheet = getSheet(sheetName.payment);
 
-    // Cấu trúc theo logic cũ: 7 cột
-    // studentCode, studentName, datePayment, type, money, lesson, note
+    // Generate unique ID
+    const paymentId = generatePaymentId();
+    
+    // Cấu trúc mới: 8 cột (thêm id ở cuối)
+    // studentCode, studentName, datePayment, type, money, lesson, note, id
     const rowData = [
       param.studentCode || '',
       param.studentName || '',
@@ -624,13 +677,14 @@ function createPayment(paramString) {
       param.type || '',
       param.money || '',
       param.lesson || '',
-      param.note || ''
+      param.note || '',
+      paymentId  // ID duy nhất
     ];
 
     sheet.appendRow(rowData);
-    Logger.log('✅ Đóng học thành công:', param.studentCode);
+    Logger.log('✅ Đóng học thành công: ' + param.studentCode + ' (ID: ' + paymentId + ')');
     
-    return rowData;
+    return { ...param, id: paymentId };
   } catch (error) {
     Logger.log('❌ Create payment error: ' + error.toString());
     throw error;
@@ -638,12 +692,13 @@ function createPayment(paramString) {
 }
 
 /**
- * Cập nhật giao dịch thanh toán
+ * Cập nhật giao dịch thanh toán - Dùng ID để tìm chính xác
  */
 function updatePayment(paramString) {
   try {
     const param = safeJSONParse(paramString);
-    Logger.log('📝 Updating payment for: ' + param.studentCode);
+    Logger.log('📝 Updating payment');
+    Logger.log('📝 Full params: ' + JSON.stringify(param));
     
     const sheet = getSheet(sheetName.payment);
     
@@ -658,36 +713,85 @@ function updatePayment(paramString) {
     const dataRange = sheet.getDataRange();
     const values = dataRange.getValues();
     
+    Logger.log('📊 Sheet has ' + values.length + ' rows');
+    
     // Find header row (thường là row 3)
     const headerRow = 2; // Index 2 = row 3 in sheet
     const headers = values[headerRow];
     
+    Logger.log('📋 Headers: ' + JSON.stringify(headers));
+    
     // Find column indexes
+    const idCol = headers.indexOf('id');
     const studentCodeCol = headers.indexOf('studentCode');
+    const studentNameCol = headers.indexOf('studentName');
     const datePaymentCol = headers.indexOf('datePayment');
     const typeCol = headers.indexOf('type');
     const lessonCol = headers.indexOf('lesson');
     const moneyCol = headers.indexOf('money');
     const noteCol = headers.indexOf('note');
     
-    if (studentCodeCol === -1 || datePaymentCol === -1) {
-      return {
-        status: 'error',
-        message: 'Không tìm thấy cột studentCode hoặc datePayment'
-      };
+    Logger.log('📍 Column indexes: id=' + idCol + 
+               ', studentCode=' + studentCodeCol + 
+               ', datePayment=' + datePaymentCol + 
+               ', type=' + typeCol + 
+               ', lesson=' + lessonCol + 
+               ', money=' + moneyCol + 
+               ', note=' + noteCol);
+    
+    // PRIORITY 1: Find by ID (chính xác nhất)
+    let rowIndex = -1;
+    
+    if (param.id && idCol !== -1) {
+      const paramId = String(param.id).trim();
+      Logger.log('🎯 Searching by ID: "' + paramId + '"');
+      
+      for (let i = headerRow + 1; i < values.length; i++) {
+        const rowId = String(values[i][idCol]).trim();
+        
+        if (rowId === paramId) {
+          rowIndex = i;
+          Logger.log('✅ Match found by ID at row ' + (i+1));
+          break;
+        }
+      }
     }
     
-    // Find the row to update
-    let rowIndex = -1;
-    for (let i = headerRow + 1; i < values.length; i++) {
-      if (values[i][studentCodeCol] === param.studentCode && 
-          values[i][datePaymentCol] === param.datePayment) {
-        rowIndex = i;
-        break;
+    // FALLBACK: Find by studentCode + datePayment (legacy support)
+    if (rowIndex === -1 && studentCodeCol !== -1 && datePaymentCol !== -1) {
+      const paramStudentCode = String(param.studentCode).trim();
+      const paramDatePayment = String(param.datePayment).trim();
+      
+      Logger.log('🔄 Fallback: Searching by studentCode + datePayment');
+      Logger.log('🎯 Searching for: studentCode="' + paramStudentCode + '", datePayment="' + paramDatePayment + '"');
+      
+      for (let i = headerRow + 1; i < values.length; i++) {
+        const rowStudentCode = String(values[i][studentCodeCol]).trim();
+        const rowDatePayment = String(values[i][datePaymentCol]).trim();
+        
+        Logger.log('🔍 Row ' + (i+1) + ': studentCode="' + rowStudentCode + '", datePayment="' + rowDatePayment + '"');
+        
+        if (rowStudentCode === paramStudentCode && rowDatePayment === paramDatePayment) {
+          rowIndex = i;
+          Logger.log('✅ Match found by studentCode+datePayment at row ' + (i+1));
+          break;
+        }
       }
     }
     
     if (rowIndex === -1) {
+      Logger.log('❌ No matching row found');
+      Logger.log('❌ Search criteria: id="' + (param.id || 'N/A') + '", studentCode="' + (param.studentCode || 'N/A') + '", datePayment="' + (param.datePayment || 'N/A') + '"');
+      
+      // Log first 5 rows để debug
+      Logger.log('📋 First 5 data rows for reference:');
+      for (let i = headerRow + 1; i < Math.min(headerRow + 6, values.length); i++) {
+        const debugId = idCol !== -1 ? String(values[i][idCol]).trim() : 'N/A';
+        const debugCode = studentCodeCol !== -1 ? String(values[i][studentCodeCol]).trim() : 'N/A';
+        const debugDate = datePaymentCol !== -1 ? String(values[i][datePaymentCol]).trim() : 'N/A';
+        Logger.log('  Row ' + (i+1) + ': id="' + debugId + '", studentCode="' + debugCode + '", datePayment="' + debugDate + '"');
+      }
+      
       return {
         status: 'error',
         message: 'Không tìm thấy giao dịch cần cập nhật'
@@ -697,16 +801,41 @@ function updatePayment(paramString) {
     // Update the row
     const actualRowNumber = rowIndex + 1; // Convert to 1-based index
     
+    Logger.log('📝 Updating row ' + actualRowNumber);
+    
+    if (studentCodeCol !== -1 && param.studentCode) {
+      Logger.log('  - Updating studentCode to: ' + param.studentCode);
+      sheet.getRange(actualRowNumber, studentCodeCol + 1).setValue(param.studentCode);
+    }
+    if (studentNameCol !== -1 && param.studentName) {
+      Logger.log('  - Updating studentName to: ' + param.studentName);
+      sheet.getRange(actualRowNumber, studentNameCol + 1).setValue(param.studentName);
+    }
+    if (datePaymentCol !== -1 && param.datePayment) {
+      Logger.log('  - Updating datePayment to: ' + param.datePayment);
+      sheet.getRange(actualRowNumber, datePaymentCol + 1).setValue(param.datePayment);
+    }
     if (typeCol !== -1 && param.type) {
+      Logger.log('  - Updating type to: ' + param.type);
       sheet.getRange(actualRowNumber, typeCol + 1).setValue(param.type);
     }
     if (lessonCol !== -1 && param.lesson !== undefined) {
+      Logger.log('  - Updating lesson to: ' + param.lesson);
       sheet.getRange(actualRowNumber, lessonCol + 1).setValue(param.lesson);
     }
     if (moneyCol !== -1 && param.money) {
-      sheet.getRange(actualRowNumber, moneyCol + 1).setValue(param.money);
+      Logger.log('  - Updating money to: ' + param.money + ' (type: ' + typeof param.money + ')');
+      // Convert to number if it's a string with commas
+      let moneyValue = param.money;
+      if (typeof moneyValue === 'string') {
+        moneyValue = moneyValue.replace(/,/g, ''); // Remove commas
+        moneyValue = parseFloat(moneyValue) || moneyValue; // Try to parse as number
+      }
+      Logger.log('  - Money after conversion: ' + moneyValue + ' (type: ' + typeof moneyValue + ')');
+      sheet.getRange(actualRowNumber, moneyCol + 1).setValue(moneyValue);
     }
     if (noteCol !== -1 && param.note !== undefined) {
+      Logger.log('  - Updating note to: ' + param.note);
       sheet.getRange(actualRowNumber, noteCol + 1).setValue(param.note);
     }
     
@@ -727,12 +856,13 @@ function updatePayment(paramString) {
 }
 
 /**
- * Xóa giao dịch thanh toán
+ * Xóa giao dịch thanh toán - Dùng ID để xóa chính xác
  */
 function deletePayment(paramString) {
   try {
     const param = safeJSONParse(paramString);
-    Logger.log('🗑️ Deleting payment for: ' + param.studentCode);
+    Logger.log('🗑️ Deleting payment');
+    Logger.log('🗑️ Params: ' + JSON.stringify(param));
     
     const sheet = getSheet(sheetName.payment);
     
@@ -751,28 +881,55 @@ function deletePayment(paramString) {
     const headerRow = 2; // Index 2 = row 3 in sheet
     const headers = values[headerRow];
     
+    Logger.log('📋 Headers: ' + JSON.stringify(headers));
+    
     // Find column indexes
+    const idCol = headers.indexOf('id');
     const studentCodeCol = headers.indexOf('studentCode');
     const datePaymentCol = headers.indexOf('datePayment');
     
-    if (studentCodeCol === -1 || datePaymentCol === -1) {
-      return {
-        status: 'error',
-        message: 'Không tìm thấy cột studentCode hoặc datePayment'
-      };
+    Logger.log('📍 Column indexes: id=' + idCol + ', studentCode=' + studentCodeCol + ', datePayment=' + datePaymentCol);
+    
+    // PRIORITY 1: Delete by ID (chính xác nhất)
+    let rowIndex = -1;
+    
+    if (param.id && idCol !== -1) {
+      const paramId = String(param.id).trim();
+      Logger.log('🎯 Deleting by ID: "' + paramId + '"');
+      
+      for (let i = headerRow + 1; i < values.length; i++) {
+        const rowId = String(values[i][idCol]).trim();
+        
+        if (rowId === paramId) {
+          rowIndex = i;
+          Logger.log('✅ Match found by ID at row ' + (i+1));
+          break;
+        }
+      }
     }
     
-    // Find the row to delete
-    let rowIndex = -1;
-    for (let i = headerRow + 1; i < values.length; i++) {
-      if (values[i][studentCodeCol] === param.studentCode && 
-          values[i][datePaymentCol] === param.datePayment) {
-        rowIndex = i;
-        break;
+    // FALLBACK: Delete by studentCode + datePayment (legacy support)
+    if (rowIndex === -1 && studentCodeCol !== -1 && datePaymentCol !== -1) {
+      const paramStudentCode = String(param.studentCode).trim();
+      const paramDatePayment = String(param.datePayment).trim();
+      
+      Logger.log('🔄 Fallback: Deleting by studentCode + datePayment');
+      Logger.log('🎯 Searching for: studentCode="' + paramStudentCode + '", datePayment="' + paramDatePayment + '"');
+      
+      for (let i = headerRow + 1; i < values.length; i++) {
+        const rowStudentCode = String(values[i][studentCodeCol]).trim();
+        const rowDatePayment = String(values[i][datePaymentCol]).trim();
+        
+        if (rowStudentCode === paramStudentCode && rowDatePayment === paramDatePayment) {
+          rowIndex = i;
+          Logger.log('✅ Match found by studentCode+datePayment at row ' + (i+1));
+          break;
+        }
       }
     }
     
     if (rowIndex === -1) {
+      Logger.log('❌ No matching row found');
       return {
         status: 'error',
         message: 'Không tìm thấy giao dịch cần xóa'
@@ -783,7 +940,7 @@ function deletePayment(paramString) {
     const actualRowNumber = rowIndex + 1; // Convert to 1-based index
     sheet.deleteRow(actualRowNumber);
     
-    Logger.log('✅ Payment deleted successfully');
+    Logger.log('✅ Payment deleted successfully (row ' + actualRowNumber + ')');
     
     return {
       status: 'success',

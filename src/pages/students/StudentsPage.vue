@@ -287,6 +287,10 @@ const sendPayment = async (dataJson) => {
   const res = await sendRequest(Action.createPayment, dataJson)
 
   if (res.status == 'success') {
+    // ✅ Backend trả về payment data với ID (gd0001, gd0002, ...)
+    const paymentWithId = res.data
+    console.log('✅ Payment created with ID:', paymentWithId?.id)
+
     showMessageBox(`Đóng học thành công!`, 'success')
     updateStudentLesson(dataJson)
   } else {

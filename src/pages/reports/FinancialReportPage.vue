@@ -869,6 +869,13 @@ const savePayment = async () => {
       money: parseMoney(editingPayment.value.money).toString(),
     }
 
+    // ✅ PRIORITY: Use ID if available (most accurate)
+    // FALLBACK: Use studentCode + datePayment (legacy support)
+    console.log(
+      '📝 Payment data to update:',
+      paymentData.id ? `ID: ${paymentData.id}` : `Legacy: ${paymentData.studentCode} + ${paymentData.datePayment}`,
+    )
+
     // Call AppScript to update payment
     const result = await sendRequest(Action.updatePayment, paymentData)
 
@@ -903,11 +910,19 @@ const confirmDelete = async () => {
   try {
     console.log('🗑️ Deleting payment:', selectedPayment.value)
 
+    // ✅ PRIORITY: Use ID if available (most accurate)
+    // FALLBACK: Use studentCode + datePayment (legacy support)
+    const deletePayload = selectedPayment.value.id
+      ? { id: selectedPayment.value.id }
+      : {
+          studentCode: selectedPayment.value.studentCode,
+          datePayment: selectedPayment.value.datePayment,
+        }
+
+    console.log('📝 Delete payload:', deletePayload)
+
     // Call AppScript to delete payment
-    const result = await sendRequest(Action.deletePayment, {
-      studentCode: selectedPayment.value.studentCode,
-      datePayment: selectedPayment.value.datePayment,
-    })
+    const result = await sendRequest(Action.deletePayment, deletePayload)
 
     if (result.status === 'success') {
       showMessageBox('Xóa giao dịch thành công!', 'success')
