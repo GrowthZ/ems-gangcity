@@ -84,8 +84,10 @@
   </VaCard>
   <VaForm class="flex flex-col gap-2 pt-3">
     <div class="flex justify-end flex-col-reverse sm:flex-row xs:flex-row gap-2">
-      <VaButton preset="secondary" color="secondary" @click="emit('close')">Huỷ</VaButton>
-      <VaButton :disabled="isValidated" color="primary" @click="onSave">{{ btnLabel }}</VaButton>
+      <VaButton preset="secondary" color="secondary" :disabled="isLoading" @click="emit('close')">Huỷ</VaButton>
+      <VaButton :disabled="isValidated || isLoading" :loading="isLoading" color="primary" @click="onSave">{{
+        btnLabel
+      }}</VaButton>
     </div>
   </VaForm>
 </template>
@@ -103,6 +105,7 @@ const props = defineProps<{
 
 const student = ref<any>(props.studentToUpdate)
 const isPayment = ref<boolean>(props.isPaymentModal)
+const isLoading = ref<boolean>(false) // ✅ Thêm loading state
 const btnLabel = computed(() => (isPayment.value ? 'Đóng học' : 'Cập nhật'))
 const placeholderText = computed(() => (isPayment.value ? 'Thông tin đóng học...' : 'Thông tin điều chỉnh...'))
 
@@ -143,12 +146,26 @@ const isValidated = computed(() => {
 const emit = defineEmits(['close', 'save', 'updateLesson'])
 
 const onSave = () => {
+  // ✅ Ngăn double-click
+  if (isLoading.value) {
+    console.log('⚠️ Request đang xử lý, bỏ qua click này')
+    return
+  }
+
+  isLoading.value = true
+
   if (isPayment.value) {
     newPayment.value.money = parseInt(newPayment.value.money).toLocaleString()
     emit('save', newPayment.value)
   } else {
     emit('updateLesson', newPayment.value)
   }
+
+  // Reset loading sau khi emit (component cha sẽ xử lý)
+  // Timeout nhỏ để tránh double-click trong khoảng thời gian ngắn
+  setTimeout(() => {
+    isLoading.value = false
+  }, 1000)
 }
 
 const getOptionByText = (text: string) => {

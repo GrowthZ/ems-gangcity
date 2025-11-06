@@ -204,15 +204,15 @@
         :is-payment-modal="isPaymentModal"
         @close="cancel"
         @save="
-          (data) => {
-            sendPayment(data)
-            ok()
+          async (data) => {
+            const success = await sendPayment(data)
+            if (success) ok()
           }
         "
         @updateLesson="
-          (data) => {
-            sendUpdateLesson(data)
-            ok()
+          async (data) => {
+            const success = await sendUpdateLesson(data)
+            if (success) ok()
           }
         "
       />
@@ -382,28 +382,46 @@ const getStatusColor = (status) => {
 // API calls
 const sendPayment = async (dataJson) => {
   store.loading = true
-  const res = await sendRequest(Action.createPayment, dataJson)
+  try {
+    const res = await sendRequest(Action.createPayment, dataJson)
 
-  if (res.status == 'success') {
-    showMessageBox(`Đóng học thành công!`, 'success')
-    await loadStudentData() // Reload data
-  } else {
+    if (res.status == 'success') {
+      showMessageBox(`Đóng học thành công!`, 'success')
+      await loadStudentData() // Reload data
+      return true // ✅ Trả về success
+    } else {
+      showMessageBox(`Đóng học thất bại!`, 'danger')
+      return false // ❌ Trả về fail
+    }
+  } catch (error) {
+    console.error('❌ Error in sendPayment:', error)
     showMessageBox(`Đóng học thất bại!`, 'danger')
+    return false
+  } finally {
+    store.loading = false
   }
-  store.loading = false
 }
 
 const sendUpdateLesson = async (dataJson) => {
   store.loading = true
-  const res = await sendRequest(Action.updateLesson, dataJson)
+  try {
+    const res = await sendRequest(Action.updateLesson, dataJson)
 
-  if (res.status == 'success') {
-    showMessageBox(`Điều chỉnh thành công!`, 'success')
-    await loadStudentData() // Reload data
-  } else {
+    if (res.status == 'success') {
+      showMessageBox(`Điều chỉnh thành công!`, 'success')
+      await loadStudentData() // Reload data
+      return true // ✅ Trả về success
+    } else {
+      showMessageBox(`Điều chỉnh thất bại!`, 'danger')
+      return false // ❌ Trả về fail
+    }
+  } catch (error) {
+    console.error('❌ Error in sendUpdateLesson:', error)
     showMessageBox(`Điều chỉnh thất bại!`, 'danger')
+    return false
+  } finally {
+    store.loading = false
   }
-  store.loading = false
 }
 
 const sendUpdateStudent = async (dataJson) => {
