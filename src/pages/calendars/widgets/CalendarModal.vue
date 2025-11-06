@@ -276,7 +276,16 @@ const getDaysInRange = (startDate, endDate) => {
         String(dayObject.endTime?.getHours()).padStart(2, '0') +
         ':' +
         String(dayObject.endTime?.getMinutes()).padStart(2, '0')
+
+      // Format ngày với số 0 đệm: dd/mm/yyyy
       const formattedDate = start.toLocaleDateString('vi-VN')
+
+      // Tạo date code với số 0 đệm: ddmmyyyy
+      const day = String(start.getDate()).padStart(2, '0')
+      const month = String(start.getMonth() + 1).padStart(2, '0')
+      const year = start.getFullYear()
+      const dateCode = day + month + year
+
       days.push({
         dateTime: formattedDate,
         location: getTextLocation(selectedLocation.value),
@@ -287,11 +296,7 @@ const getDaysInRange = (startDate, endDate) => {
         endTime: endTime,
         attendanceTime: startTime + ' - ' + endTime,
         attendanceCode:
-          'GC' +
-          selectedGroup.value +
-          formattedDate.split('/').join('') +
-          startTime.split(':').join('') +
-          endTime.split(':').join(''),
+          'GC' + selectedGroup.value + dateCode + startTime.split(':').join('') + endTime.split(':').join(''),
         note: '',
         status: 0,
       })
@@ -328,31 +333,58 @@ const isValid = computed(() => {
 })
 
 const checkExistCalendar = computed(() => {
-  const newAttendanceCode = getDaysInRange(startDate.value, endDate.value).map((day) => day.attendanceCode)
+  const newDays = getDaysInRange(startDate.value, endDate.value)
+  const newAttendanceCode = newDays.map((day) => day.attendanceCode)
+
+  // Nếu không có lịch mới → không trùng lặp
+  if (newAttendanceCode.length === 0) {
+    return false
+  }
+
+  // Lấy tháng/năm đang tạo lịch
+  const startMonth = new Date(startDate.value).getMonth()
+  const startYear = new Date(startDate.value).getFullYear()
+
+  // Chỉ check trùng với lịch chưa điểm danh TRONG CÙNG THÁNG
+  const relevantCalendars = props.calendars.filter((calendar) => {
+    // Kiểm tra status (chưa điểm danh)
+    const isUnattended = !calendar.status || calendar.status === 0 || calendar.status === '0'
+    if (!isUnattended) return false
+
+    // Parse ngày của lịch (format: dd/mm/yyyy)
+    const dateParts = calendar.dateTime?.split('/')
+    if (!dateParts || dateParts.length !== 3) return false
+
+    const calendarMonth = parseInt(dateParts[1]) - 1 // JavaScript months are 0-indexed
+    const calendarYear = parseInt(dateParts[2])
+
+    // Chỉ lấy lịch cùng tháng/năm
+    return calendarMonth === startMonth && calendarYear === startYear
+  })
+
+  const relevantCodes = relevantCalendars.map((cal) => cal.attendanceCode)
 
   // Debug info
   console.log('🔍 Check duplicate calendar:')
   console.log('  - Selected group:', selectedGroup.value)
   console.log('  - Date range:', startDate.value, 'to', endDate.value)
+  console.log('  - Month/Year filter:', `${startMonth + 1}/${startYear}`)
   console.log('  - New attendance codes:', newAttendanceCode.length, 'items')
   if (newAttendanceCode.length > 0) {
     console.log('  - Sample new code:', newAttendanceCode[0])
   }
-  console.log('  - Existing calendars (unattended):', calendarOptions.value.length, 'items')
-
-  // Nếu không có lịch mới → không trùng lặp
-  if (newAttendanceCode.length === 0) {
-    console.log('  ✅ No new calendars to create')
-    return false
+  console.log('  - Total unattended calendars:', calendarOptions.value.length, 'items')
+  console.log('  - Relevant calendars (same month):', relevantCalendars.length, 'items')
+  if (relevantCalendars.length > 0) {
+    console.log('  - Relevant calendar details:', relevantCalendars)
   }
 
   // Check xem có attendanceCode nào trùng với lịch đã tồn tại không
-  const duplicates = newAttendanceCode.filter((code) => calendarOptions.value.includes(code))
+  const duplicates = newAttendanceCode.filter((code) => relevantCodes.includes(code))
   const matchFound = duplicates.length > 0
 
   if (matchFound) {
     console.log('  ❌ Found duplicates:', duplicates)
-    // Tìm xem lịch trùng là của ngày nào
     const duplicateCalendars = props.calendars.filter((cal) => duplicates.includes(cal.attendanceCode))
     console.log('  ❌ Duplicate calendar details:', duplicateCalendars)
   } else {
