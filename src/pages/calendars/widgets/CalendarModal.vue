@@ -295,6 +295,7 @@ const getDaysInRange = (startDate, endDate) => {
       const dayNum = start.getDate() // Không pad số 0 cho ngày (1-31)
       const monthAbbr = getMonthAbbr(start.getMonth() + 1) // jan, feb, mar, ...
       const dateCode = dayNum + monthAbbr + year
+      const timeCode = startTime.split(':').join('') + endTime.split(':').join('')
 
       days.push({
         dateTime: formattedDate,
@@ -305,8 +306,7 @@ const getDaysInRange = (startDate, endDate) => {
         startTime: startTime,
         endTime: endTime,
         attendanceTime: startTime + ' - ' + endTime,
-        attendanceCode:
-          'GC' + selectedGroup.value + dateCode + startTime.split(':').join('') + endTime.split(':').join(''),
+        attendanceCode: 'GC' + selectedGroup.value + '-' + dateCode + '-' + timeCode,
         note: '',
         status: 0,
       })
