@@ -255,6 +255,11 @@ const getTextDay = (day) => {
   return days.find((d) => d.value == day).text
 }
 
+const getMonthAbbr = (monthNumber) => {
+  const months = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec']
+  return months[monthNumber - 1] || ''
+}
+
 const getDaysInRange = (startDate, endDate) => {
   const days = []
   const start = new Date(startDate)
@@ -277,14 +282,19 @@ const getDaysInRange = (startDate, endDate) => {
         ':' +
         String(dayObject.endTime?.getMinutes()).padStart(2, '0')
 
-      // Format ngày với số 0 đệm: dd/mm/yyyy
-      const formattedDate = start.toLocaleDateString('vi-VN')
-
-      // Tạo date code với số 0 đệm: ddmmyyyy
+      // ✅ FORMAT ĐÚNG: Luôn dùng dd/mm/yyyy với số 0 đệm
       const day = String(start.getDate()).padStart(2, '0')
       const month = String(start.getMonth() + 1).padStart(2, '0')
-      const year = start.getFullYear()
-      const dateCode = day + month + year
+      const year = String(start.getFullYear())
+      
+      // Format ngày để hiển thị: dd/mm/yyyy
+      const formattedDate = `${day}/${month}/${year}`
+
+      // Tạo date code: {d}mmm{yyyy} (VD: 1nov2025, 15dec2024)
+      // QUAN TRỌNG: Dùng tên tháng 3 chữ cái để tránh nhầm lẫn hoàn toàn
+      const dayNum = start.getDate() // Không pad số 0 cho ngày (1-31)
+      const monthAbbr = getMonthAbbr(start.getMonth() + 1) // jan, feb, mar, ...
+      const dateCode = dayNum + monthAbbr + year
 
       days.push({
         dateTime: formattedDate,
