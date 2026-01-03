@@ -26,6 +26,7 @@ var actionHandlers = {
   'newStudent': newStudent,
   'updateStudent': updateStudent,
   'updateStudentByMonth': updateStudentByMonth,
+  'checkAttendanceConsistency': checkAttendanceConsistency,
 };
 
 let sheetName = {
@@ -316,8 +317,8 @@ function markAttendance(paramString) {
         detailSheet.appendRow(rowData);
         const newRow = detailSheet.getLastRow();
         
-        // ✅ ÉP FORMAT dd/mm/yyyy cho cột date (D)
-        detailSheet.getRange(`D${newRow}`).setNumberFormat('dd/mm/yyyy');
+        // ✅ ÉP FORMAT TEXT cho cột date (D) để tránh Google Sheets parse nhầm
+        detailSheet.getRange(`D${newRow}`).setNumberFormat('@');
       });
       
       Logger.log('✅ Đã ghi ' + studentMarks.length + ' học viên có mặt');
@@ -343,8 +344,8 @@ function markAttendance(paramString) {
         missingSheet.appendRow(rowData);
         const newRow = missingSheet.getLastRow();
         
-        // ✅ ÉP FORMAT dd/mm/yyyy cho cột date (B)
-        missingSheet.getRange(`B${newRow}`).setNumberFormat('dd/mm/yyyy');
+        // ✅ ÉP FORMAT TEXT cho cột date (B) để tránh Google Sheets parse nhầm
+        missingSheet.getRange(`B${newRow}`).setNumberFormat('@');
       });
       
       Logger.log('✅ Đã ghi ' + studentMissings.length + ' học viên vắng mặt');
@@ -437,8 +438,8 @@ function markAttendance(paramString) {
     attendanceSheet.getRange(`J${newRow}`).setFormula(formulaSubSalary);
     attendanceSheet.getRange(`K${newRow}`).setFormula(formulaLocation);
     
-    // ✅ ÉP FORMAT dd/mm/yyyy cho cột dateTime để tránh Google Sheets hiểu nhầm
-    attendanceSheet.getRange(`B${newRow}`).setNumberFormat('dd/mm/yyyy');
+    // ✅ ÉP FORMAT TEXT cho cột dateTime để tránh Google Sheets parse nhầm
+    attendanceSheet.getRange(`B${newRow}`).setNumberFormat('@');
     
     Logger.log('✅ Đã ghi/update summary vào DiemDanh với formulas (calendar: ' + (calendar ? 'có' : 'không') + ')');
     
@@ -595,21 +596,40 @@ function updateStatusCalendar(attendanceCode) {
     }
     
     const calendarData = calendarSheet.getDataRange().getValues();
+    Logger.log('🔍 Searching for attendanceCode: "' + attendanceCode + '"');
+    Logger.log('📊 Total calendar rows: ' + calendarData.length);
     
-    // Tìm row có attendanceCode trùng và update status (cột 11) = '1'
+    // Tìm row có attendanceCode trùng và update status
+    // Cấu trúc: attendanceCode(A), dateTime(B), location(C), group(D), teacher(E), 
+    //           subTeacher(F), startTime(G), endTime(H), attendanceTime(I), note(J), status(K)
+    // status = cột K = index 10 = column 11
     for (let i = 0; i < calendarData.length; i++) {
       const rowCode = String(calendarData[i][0]).trim();
       
+      // Debug: Log first 5 codes to compare
+      if (i < 5) {
+        Logger.log('  Row ' + (i+1) + ' code: "' + rowCode + '"');
+      }
+      
       if (rowCode === attendanceCode) {
         const rowNumber = i + 1;
-        // Update cột 11 (status) = '1' để đánh dấu đã điểm danh
-        calendarSheet.getRange(rowNumber, 11).setValue('1');
-        Logger.log('✅ Đã cập nhật status calendar row ' + rowNumber + ' = "1"');
+        const oldStatus = calendarData[i][10]; // Column K (status)
+        
+        // ✅ FIX: Update status = 1 (number, không phải string)
+        calendarSheet.getRange(rowNumber, 11).setValue(1);
+        Logger.log('✅ Updated status for calendar row ' + rowNumber);
+        Logger.log('   - AttendanceCode: ' + attendanceCode);
+        Logger.log('   - Old status: ' + oldStatus);
+        Logger.log('   - New status: 1');
         return calendarData[i];
       }
     }
     
-    Logger.log('⚠️ Không tìm thấy calendar với code: ' + attendanceCode);
+    Logger.log('❌ Calendar NOT FOUND with code: "' + attendanceCode + '"');
+    Logger.log('⚠️ This may be because:');
+    Logger.log('   1. AttendanceCode format mismatch (old vs new format)');
+    Logger.log('   2. Calendar does not exist in LichDay sheet');
+    Logger.log('   3. AttendanceCode has extra spaces or special characters');
   } catch (error) {
     Logger.log('❌ Update status calendar error: ' + error.toString());
   }
@@ -832,8 +852,8 @@ function createCalendars(paramString) {
       sheet.appendRow(rowData);
       const newRow = sheet.getLastRow();
       
-      // ✅ ÉP FORMAT dd/mm/yyyy cho cột dateTime (B)
-      sheet.getRange(`B${newRow}`).setNumberFormat('dd/mm/yyyy');
+      // ✅ ÉP FORMAT TEXT cho cột dateTime (B) để tránh Google Sheets parse nhầm
+      sheet.getRange(`B${newRow}`).setNumberFormat('@');
     });
 
     Logger.log('✅ Tạo lịch dạy thành công:', calendars.length, 'lịch');
@@ -921,8 +941,8 @@ function createPayment(paramString) {
     sheet.appendRow(rowData);
     const newRow = sheet.getLastRow();
     
-    // ✅ ÉP FORMAT dd/mm/yyyy cho cột datePayment (C)
-    sheet.getRange(`C${newRow}`).setNumberFormat('dd/mm/yyyy');
+    // ✅ ÉP FORMAT TEXT cho cột datePayment (C) để tránh Google Sheets parse nhầm
+    sheet.getRange(`C${newRow}`).setNumberFormat('@');
     
     Logger.log('✅ Đóng học thành công: ' + param.studentCode + ' (ID: ' + paymentId + ')');
     
@@ -1057,8 +1077,8 @@ function updatePayment(paramString) {
       const formattedDate = formatDate(param.datePayment);
       Logger.log('  - Updating datePayment to: ' + formattedDate);
       sheet.getRange(actualRowNumber, datePaymentCol + 1).setValue(formattedDate);
-      // ✅ ÉP FORMAT dd/mm/yyyy
-      sheet.getRange(actualRowNumber, datePaymentCol + 1).setNumberFormat('dd/mm/yyyy');
+      // ✅ ÉP FORMAT TEXT để tránh Google Sheets parse nhầm
+      sheet.getRange(actualRowNumber, datePaymentCol + 1).setNumberFormat('@');
     }
     if (typeCol !== -1 && param.type) {
       Logger.log('  - Updating type to: ' + param.type);
@@ -1222,8 +1242,8 @@ function updateLesson(paramString) {
     sheet.appendRow(rowData);
     const newRow = sheet.getLastRow();
     
-    // ✅ ÉP FORMAT dd/mm/yyyy cho cột datePayment (C)
-    sheet.getRange(`C${newRow}`).setNumberFormat('dd/mm/yyyy');
+    // ✅ ÉP FORMAT TEXT cho cột datePayment (C) để tránh Google Sheets parse nhầm
+    sheet.getRange(`C${newRow}`).setNumberFormat('@');
     
     Logger.log('✅ Điều chỉnh buổi học:', param.studentCode);
     
@@ -1327,9 +1347,9 @@ function newStudent(paramString) {
     sheet.appendRow(rowData);
     const newRow = sheet.getLastRow();
     
-    // ✅ ÉP FORMAT dd/mm/yyyy cho cột birthday (G) và dateStart (I)
-    sheet.getRange(`G${newRow}`).setNumberFormat('dd/mm/yyyy');
-    sheet.getRange(`I${newRow}`).setNumberFormat('dd/mm/yyyy');
+    // ✅ ÉP FORMAT TEXT cho cột birthday (G) và dateStart (I) để tránh Google Sheets parse nhầm
+    sheet.getRange(`G${newRow}`).setNumberFormat('@');
+    sheet.getRange(`I${newRow}`).setNumberFormat('@');
     
     Logger.log('✅ Thêm học viên mới: ' + studentCode);
     
@@ -1467,8 +1487,8 @@ function updateStudentByMonth(paramString) {
       sheet.appendRow(rowData);
       const newRow = sheet.getLastRow();
       
-      // ✅ ÉP FORMAT dd/mm/yyyy cho cột dateUpdate (D)
-      sheet.getRange(`D${newRow}`).setNumberFormat('dd/mm/yyyy');
+      // ✅ ÉP FORMAT TEXT cho cột dateUpdate (D) để tránh Google Sheets parse nhầm
+      sheet.getRange(`D${newRow}`).setNumberFormat('@');
     });
 
     console.log('✅ Cập nhật tháng thành công:', dataArray.length, 'records');
@@ -1506,10 +1526,9 @@ function fixAttendanceCodeFromDateTime() {
     Logger.log('🔧 Fix Attendance Codes');
     Logger.log('========================================');
 
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const calendarSheet = ss.getSheetByName('LichDay');
-    const attendanceSheet = ss.getSheetByName('DiemDanh');
-    const detailSheet = ss.getSheetByName('DiemDanhChiTiet');
+    const calendarSheet = sheetData.getSheetByName('LichDay');
+    const attendanceSheet = sheetData.getSheetByName('DiemDanh');
+    const detailSheet = sheetData.getSheetByName('DiemDanhChiTiet');
 
     if (!calendarSheet || !attendanceSheet || !detailSheet) {
       Logger.log('❌ Required sheets not found');
@@ -1601,43 +1620,6 @@ function fixAttendanceCodeFromDateTime() {
       }
     }
     Logger.log('  ✓ Processed: ' + count2 + ' codes');
-    
-    // ============================================
-    // BƯỚC 3: Update DiemDanh (Column A = attendanceCode)
-    // ============================================
-    Logger.log('');
-    Logger.log('📌 STEP 3: Updating DiemDanh...');
-    Logger.log('─────────────────────────────────────');
-    Logger.log('ℹ️ DiemDanh dateTime (Column B) uses VLOOKUP formula from LichDay');
-    Logger.log('ℹ️ Will use codeMapping from STEP 1 & 2 to update attendanceCode only');
-    
-    // DiemDanh không cần parse dateTime vì Column B là công thức:
-    // =IFERROR(VLOOKUP(A1823, LichDay!A:E, 5, FALSE), "")
-    // Chỉ cần update Column A dựa vào codeMapping đã có
-          codeMapping[oldCode] = newCode;
-          attendanceProcessed++;
-          
-          if (attendanceProcessed <= 5) {
-            Logger.log('  ' + oldCode + ' → ' + newCode + ' (date: ' + day + '/' + month + '/' + year + ')');
-          }
-        }
-      }
-    }
-    
-    Logger.log('  Processed: ' + detailProcessed + ' codes from DiemDanhChiTiet');
-    
-    // ============================================
-    // BƯỚC 3: Update DiemDanh (Column A = attendanceCode)
-    // ============================================
-    Logger.log('');
-    Logger.log('📌 STEP 3: Updating DiemDanh...');
-    Logger.log('─────────────────────────────────────');
-    Logger.log('ℹ️ DiemDanh dateTime (Column B) uses VLOOKUP formula from LichDay');
-    Logger.log('ℹ️ Will use codeMapping from STEP 1 & 2 to update attendanceCode only');
-    
-    // DiemDanh không cần parse dateTime vì Column B là công thức:
-    // =IFERROR(VLOOKUP(A1823, LichDay!A:E, 5, FALSE), "")
-    // Chỉ cần update Column A dựa vào codeMapping đã có
 
     // ===== SUMMARY =====
     const totalCodes = Object.keys(codeMapping).length;
@@ -2325,25 +2307,530 @@ function fixAllAttendanceIssues() {
     Logger.log('🔧 Fix All Attendance Issues');
     Logger.log('========================================\n');
     
+    // STEP 0: Check orphaned records (optional diagnostic)
+    Logger.log('📌 STEP 0: Check for orphaned records...');
+    const orphanedResult = checkOrphanedAttendanceRecords();
+    
     // STEP 1: Fix codes
-    Logger.log('📌 STEP 1: Fix attendance codes...');
+    Logger.log('\n📌 STEP 1: Fix attendance codes...');
     const formatResult = fixAttendanceCodeFromDateTime();
     
     // STEP 2: Fix missing records
     Logger.log('\n📌 STEP 2: Create missing records...');
     const missingResult = fixMissingAttendanceRecords();
     
+    // STEP 3: Sync status
+    Logger.log('\n📌 STEP 3: Sync status from DiemDanh...');
+    const statusResult = syncStatusFromAttendance();
+    
     // Summary
     Logger.log('\n========================================');
     Logger.log('🎉 ALL FIXES COMPLETED!');
+    Logger.log('  - Orphaned records: ' + (orphanedResult?.orphanedCount || 0) + ' (check only)');
     Logger.log('  - Codes fixed: ' + (formatResult?.totalCodes || 0));
     Logger.log('  - Records created: ' + (missingResult?.created || 0));
+    Logger.log('  - Status synced: ' + (statusResult?.updated || 0));
     Logger.log('========================================');
     
     return {
       success: true,
+      orphanedCheck: orphanedResult,
       formatFixes: formatResult,
-      missingRecords: missingResult
+      missingRecords: missingResult,
+      statusSync: statusResult
+    };
+    
+  } catch (error) {
+    Logger.log('❌ Error: ' + error.toString());
+    throw error;
+  }
+}
+
+/**
+ * SYNC STATUS FROM ATTENDANCE
+ * Đọc từ DiemDanh hoặc DiemDanhChiTiet để cập nhật status vào LichDay
+ * 
+ * Logic:
+ * - Nếu attendanceCode có trong DiemDanh hoặc DiemDanhChiTiet → status = 1 (đã điểm danh)
+ * - Nếu không có → status = 0 (chưa điểm danh)
+ */
+function syncStatusFromAttendance() {
+  try {
+    Logger.log('🔄 Syncing status from DiemDanh/DiemDanhChiTiet to LichDay...');
+    Logger.log('========================================');
+    
+    const calendarSheet = sheetData.getSheetByName('LichDay');
+    const attendanceSheet = sheetData.getSheetByName('DiemDanh');
+    const detailSheet = sheetData.getSheetByName('DiemDanhChiTiet');
+    
+    if (!calendarSheet || !attendanceSheet || !detailSheet) {
+      Logger.log('❌ Required sheets not found');
+      return { success: false, error: 'Missing sheets' };
+    }
+    
+    // Đọc tất cả attendanceCodes từ DiemDanh và DiemDanhChiTiet
+    const attendanceData = attendanceSheet.getDataRange().getValues();
+    const detailData = detailSheet.getDataRange().getValues();
+    
+    // Tạo Set chứa tất cả codes đã điểm danh (unique)
+    const attendedCodes = new Set();
+    
+    // Từ DiemDanh (bỏ qua header 3 rows)
+    for (let i = 3; i < attendanceData.length; i++) {
+      const code = String(attendanceData[i][0]).trim();
+      if (code && code.startsWith('GC')) {
+        attendedCodes.add(code);
+      }
+    }
+    
+    // Từ DiemDanhChiTiet (bỏ qua header 3 rows)
+    for (let i = 3; i < detailData.length; i++) {
+      const code = String(detailData[i][0]).trim();
+      if (code && code.startsWith('GC')) {
+        attendedCodes.add(code);
+      }
+    }
+    
+    Logger.log('📊 Found ' + attendedCodes.size + ' unique attended codes');
+    
+    // Đọc LichDay và update status
+    const calendarData = calendarSheet.getDataRange().getValues();
+    let updated = 0;
+    let alreadyCorrect = 0;
+    
+    for (let i = 3; i < calendarData.length; i++) {
+      const code = String(calendarData[i][0]).trim();
+      if (!code || !code.startsWith('GC')) continue;
+      
+      const currentStatus = calendarData[i][10]; // Column K (index 10)
+      const shouldBeAttended = attendedCodes.has(code);
+      const correctStatus = shouldBeAttended ? 1 : 0;
+      
+      // Check nếu cần update
+      if (currentStatus != correctStatus) {
+        const rowNumber = i + 1;
+        calendarSheet.getRange(rowNumber, 11).setValue(correctStatus);
+        updated++;
+        
+        if (updated <= 10) {
+          Logger.log('  Updated row ' + rowNumber + ': ' + code + ' → status = ' + correctStatus);
+        }
+      } else {
+        alreadyCorrect++;
+      }
+    }
+    
+    Logger.log('\n✅ COMPLETED!');
+    Logger.log('  - Updated: ' + updated + ' rows');
+    Logger.log('  - Already correct: ' + alreadyCorrect + ' rows');
+    Logger.log('  - Total processed: ' + (updated + alreadyCorrect) + ' rows');
+    Logger.log('========================================');
+    
+    return {
+      success: true,
+      updated: updated,
+      alreadyCorrect: alreadyCorrect,
+      total: updated + alreadyCorrect
+    };
+    
+  } catch (error) {
+    Logger.log('❌ Error: ' + error.toString());
+    throw error;
+  }
+}
+
+/**
+ * FIX TIME OFFSET IN LICHDAY - Sửa thời gian bị nhanh 18 phút
+ * 
+ * Vấn đề: Các bản ghi trong LichDay có startTime và endTime bị nhanh hơn 18 phút
+ * Giải pháp: Trừ đi 18 phút cho TẤT CẢ các bản ghi
+ * 
+ * Cách sử dụng:
+ * 1. Mở Apps Script Editor
+ * 2. Chọn function "fixTimeOffsetInLichDay" từ dropdown
+ * 3. Click Run (▶)
+ * 4. Kiểm tra logs để xem số bản ghi đã fix
+ */
+function fixTimeOffsetInLichDay() {
+  try {
+    Logger.log('='.repeat(50));
+    Logger.log('🔧 FIX TIME OFFSET IN LICHDAY - Bắt đầu...');
+    Logger.log('='.repeat(50));
+    
+    const calendarSheet = getSheet(sheetName.calendar);
+    if (!calendarSheet) {
+      throw new Error('Sheet LichDay không tồn tại');
+    }
+    
+    const data = calendarSheet.getDataRange().getDisplayValues();
+    Logger.log('📊 Total rows: ' + data.length);
+    
+    let updatedCount = 0;
+    let skippedCount = 0;
+    const codeMapping = {}; // oldCode -> newCode
+    
+    // Bỏ qua 3 dòng đầu (title + headers)
+    // Cấu trúc: A=attendanceCode, B=dateTime, C=location, D=group, E=teacher, 
+    //           F=subTeacher, G=startTime, H=endTime, I=attendanceTime, J=note, K=status
+    for (let i = 3; i < data.length; i++) {
+      const rowNumber = i + 1;
+      const oldCode = String(data[i][0]).trim();      // Column A
+      const dateTimeStr = String(data[i][1]).trim();  // Column B
+      const group = String(data[i][3]).trim();        // Column D
+      const startTimeStr = String(data[i][6]).trim(); // Column G (index 6)
+      const endTimeStr = String(data[i][7]).trim();   // Column H (index 7)
+      
+      if (!startTimeStr || !endTimeStr) {
+        skippedCount++;
+        continue;
+      }
+      
+      // Parse HH:mm format
+      const startMatch = startTimeStr.match(/^(\d{1,2}):(\d{2})$/);
+      const endMatch = endTimeStr.match(/^(\d{1,2}):(\d{2})$/);
+      
+      if (!startMatch || !endMatch) {
+        Logger.log(`⚠️ Row ${rowNumber}: Invalid time format - startTime="${startTimeStr}", endTime="${endTimeStr}"`);
+        skippedCount++;
+        continue;
+      }
+      
+      // Trừ đi 18 phút
+      const startHour = parseInt(startMatch[1], 10);
+      const startMinute = parseInt(startMatch[2], 10);
+      const endHour = parseInt(endMatch[1], 10);
+      const endMinute = parseInt(endMatch[2], 10);
+      
+      // Tính toán thời gian mới (trừ 18 phút)
+      let newStartMinute = startMinute - 18;
+      let newStartHour = startHour;
+      if (newStartMinute < 0) {
+        newStartMinute += 60;
+        newStartHour -= 1;
+        if (newStartHour < 0) newStartHour += 24;
+      }
+      
+      let newEndMinute = endMinute - 18;
+      let newEndHour = endHour;
+      if (newEndMinute < 0) {
+        newEndMinute += 60;
+        newEndHour -= 1;
+        if (newEndHour < 0) newEndHour += 24;
+      }
+      
+      // Format lại HH:mm
+      const newStartTime = String(newStartHour).padStart(2, '0') + ':' + String(newStartMinute).padStart(2, '0');
+      const newEndTime = String(newEndHour).padStart(2, '0') + ':' + String(newEndMinute).padStart(2, '0');
+      const newAttendanceTime = newStartTime + ' - ' + newEndTime;
+      
+      // Tạo attendanceCode mới với time đã fix
+      let newCode = oldCode;
+      if (dateTimeStr && group) {
+        const dateParts = dateTimeStr.split('/');
+        if (dateParts.length === 3) {
+          const dayNum = parseInt(dateParts[0], 10);
+          const monthNum = parseInt(dateParts[1], 10);
+          const year = String(dateParts[2]);
+          const monthAbbr = getMonthAbbr(monthNum);
+          const dateCode = dayNum + monthAbbr + year;
+          const timeCode = newStartTime.replace(/:/g, '') + newEndTime.replace(/:/g, '');
+          newCode = 'GC' + group + '-' + dateCode + '-' + timeCode;
+          
+          if (oldCode !== newCode) {
+            codeMapping[oldCode] = newCode;
+          }
+        }
+      }
+      
+      // Update vào sheet
+      calendarSheet.getRange(rowNumber, 1).setValue(newCode);           // Column A
+      calendarSheet.getRange(rowNumber, 7).setValue(newStartTime);      // Column G
+      calendarSheet.getRange(rowNumber, 8).setValue(newEndTime);        // Column H
+      calendarSheet.getRange(rowNumber, 9).setValue(newAttendanceTime); // Column I
+      
+      updatedCount++;
+      
+      if (updatedCount <= 5) {
+        Logger.log(`✅ Row ${rowNumber}:`);
+        Logger.log(`   Time: ${startTimeStr} → ${newStartTime}, ${endTimeStr} → ${newEndTime}`);
+        if (oldCode !== newCode) {
+          Logger.log(`   Code: ${oldCode} → ${newCode}`);
+        }
+      }
+    }
+    
+    // Update attendanceCode trong DiemDanh và DiemDanhChiTiet
+    const numCodesChanged = Object.keys(codeMapping).length;
+    if (numCodesChanged > 0) {
+      Logger.log('');
+      Logger.log('📝 Updating attendanceCode in DiemDanh and DiemDanhChiTiet...');
+      Logger.log('   Codes to update: ' + numCodesChanged);
+      
+      // Update DiemDanh
+      const attendanceSheet = getSheet(sheetName.attendance);
+      if (attendanceSheet) {
+        const attendanceData = attendanceSheet.getDataRange().getDisplayValues();
+        let attendanceUpdated = 0;
+        for (let i = 3; i < attendanceData.length; i++) {
+          const oldCode = String(attendanceData[i][0]).trim();
+          if (codeMapping[oldCode]) {
+            attendanceSheet.getRange(i + 1, 1).setValue(codeMapping[oldCode]);
+            attendanceUpdated++;
+          }
+        }
+        Logger.log('   ✅ DiemDanh: Updated ' + attendanceUpdated + ' codes');
+      }
+      
+      // Update DiemDanhChiTiet
+      const detailSheet = getSheet(sheetName.attendanceDetail);
+      if (detailSheet) {
+        const detailData = detailSheet.getDataRange().getDisplayValues();
+        let detailUpdated = 0;
+        for (let i = 3; i < detailData.length; i++) {
+          const oldCode = String(detailData[i][0]).trim();
+          if (codeMapping[oldCode]) {
+            detailSheet.getRange(i + 1, 1).setValue(codeMapping[oldCode]);
+            detailUpdated++;
+          }
+        }
+        Logger.log('   ✅ DiemDanhChiTiet: Updated ' + detailUpdated + ' codes');
+      }
+    }
+    
+    Logger.log('');
+    Logger.log('='.repeat(50));
+    Logger.log('✅ HOÀN THÀNH!');
+    Logger.log('  - Đã fix time: ' + updatedCount + ' rows');
+    Logger.log('  - Đã fix code: ' + numCodesChanged + ' codes');
+    Logger.log('  - Bỏ qua: ' + skippedCount + ' rows');
+    Logger.log('='.repeat(50));
+    
+    return {
+      success: true,
+      updated: updatedCount,
+      codesChanged: numCodesChanged,
+      skipped: skippedCount,
+      total: data.length - 3
+    };
+    
+  } catch (error) {
+    Logger.log('❌ Error: ' + error.toString());
+    throw error;
+  }
+}
+
+/**
+ * DEBUG: Tìm một attendanceCode cụ thể trong các sheets
+ * Dùng để debug khi một code có trong DiemDanhChiTiet nhưng không có trong DiemDanh
+ */
+function debugFindSpecificCode() {
+  const targetCode = 'GCDance2-1nov2025-20302200'; // ← Thay đổi code cần tìm ở đây
+  
+  Logger.log('='.repeat(60));
+  Logger.log('🔍 DEBUG: Finding code "' + targetCode + '"');
+  Logger.log('='.repeat(60));
+  
+  // Declare variables at function scope
+  let foundInDetail = false;
+  let foundInAttendance = false;
+  let foundInCalendar = false;
+  
+  // Check DiemDanhChiTiet
+  const detailSheet = getSheet(sheetName.attendanceDetail);
+  if (detailSheet) {
+    const detailData = detailSheet.getDataRange().getDisplayValues();
+    Logger.log('');
+    Logger.log('📊 DiemDanhChiTiet (total rows: ' + detailData.length + ')');
+    Logger.log('─'.repeat(60));
+    
+    for (let i = 0; i < detailData.length; i++) {
+      const code = String(detailData[i][0]).trim();
+      if (code === targetCode) {
+        foundInDetail = true;
+        Logger.log('  ✅ FOUND at row ' + (i + 1) + ' (index ' + i + ')');
+        Logger.log('     attendanceCode: "' + detailData[i][0] + '"');
+        Logger.log('     studentCode: "' + detailData[i][1] + '"');
+        Logger.log('     studentName: "' + detailData[i][2] + '"');
+        Logger.log('     date: "' + detailData[i][3] + '"');
+        Logger.log('     group: "' + detailData[i][4] + '"');
+      }
+    }
+    
+    if (!foundInDetail) {
+      Logger.log('  ❌ NOT FOUND in DiemDanhChiTiet');
+    }
+  }
+  
+  // Check DiemDanh
+  const attendanceSheet = getSheet(sheetName.attendance);
+  if (attendanceSheet) {
+    const attendanceData = attendanceSheet.getDataRange().getDisplayValues();
+    Logger.log('');
+    Logger.log('📋 DiemDanh (total rows: ' + attendanceData.length + ')');
+    Logger.log('─'.repeat(60));
+    
+    for (let i = 0; i < attendanceData.length; i++) {
+      const code = String(attendanceData[i][0]).trim();
+      if (code === targetCode) {
+        foundInAttendance = true;
+        Logger.log('  ✅ FOUND at row ' + (i + 1) + ' (index ' + i + ')');
+        Logger.log('     attendanceCode: "' + attendanceData[i][0] + '"');
+        Logger.log('     dateTime: "' + attendanceData[i][1] + '"');
+        Logger.log('     group: "' + attendanceData[i][2] + '"');
+        Logger.log('     teacher: "' + attendanceData[i][3] + '"');
+      }
+    }
+    
+    if (!foundInAttendance) {
+      Logger.log('  ❌ NOT FOUND in DiemDanh');
+    }
+  }
+  
+  // Check LichDay
+  const calendarSheet = getSheet(sheetName.calendar);
+  if (calendarSheet) {
+    const calendarData = calendarSheet.getDataRange().getDisplayValues();
+    Logger.log('');
+    Logger.log('📅 LichDay (total rows: ' + calendarData.length + ')');
+    Logger.log('─'.repeat(60));
+    
+    for (let i = 0; i < calendarData.length; i++) {
+      const code = String(calendarData[i][0]).trim();
+      if (code === targetCode) {
+        foundInCalendar = true;
+        Logger.log('  ✅ FOUND at row ' + (i + 1) + ' (index ' + i + ')');
+        Logger.log('     attendanceCode: "' + calendarData[i][0] + '"');
+        Logger.log('     dateTime: "' + calendarData[i][1] + '"');
+        Logger.log('     location: "' + calendarData[i][2] + '"');
+        Logger.log('     group: "' + calendarData[i][3] + '"');
+        Logger.log('     teacher: "' + calendarData[i][4] + '"');
+        Logger.log('     startTime: "' + calendarData[i][6] + '"');
+        Logger.log('     endTime: "' + calendarData[i][7] + '"');
+      }
+    }
+    
+    if (!foundInCalendar) {
+      Logger.log('  ❌ NOT FOUND in LichDay');
+    }
+  }
+  
+  Logger.log('');
+  Logger.log('='.repeat(60));
+  Logger.log('💡 SUMMARY:');
+  Logger.log('   DiemDanhChiTiet: ' + (foundInDetail ? '✅ Found' : '❌ Not found'));
+  Logger.log('   DiemDanh: ' + (foundInAttendance ? '✅ Found' : '❌ Not found'));
+  Logger.log('   LichDay: ' + (foundInCalendar ? '✅ Found' : '❌ Not found'));
+  Logger.log('='.repeat(60));
+}
+
+/**
+ * CHECK ORPHANED ATTENDANCE RECORDS
+ * Kiểm tra các record trong DiemDanh KHÔNG có trong DiemDanhChiTiet
+ * (Không nên xảy ra nếu logic đúng, nhưng kiểm tra để chắc chắn)
+ * 
+ * Cách sử dụng:
+ * 1. Mở Apps Script Editor
+ * 2. Chọn function "checkOrphanedAttendanceRecords" từ dropdown
+ * 3. Click Run (▶)
+ * 
+ * Script sẽ:
+ * - Tìm các attendanceCode trong DiemDanh
+ * - Check xem code nào KHÔNG có trong DiemDanhChiTiet
+ * - Log cảnh báo (không tự động xóa)
+ */
+function checkOrphanedAttendanceRecords() {
+  try {
+    Logger.log('='.repeat(50));
+    Logger.log('🔍 CHECK ORPHANED ATTENDANCE RECORDS');
+    Logger.log('='.repeat(50));
+    
+    const detailSheet = getSheet(sheetName.attendanceDetail);
+    const attendanceSheet = getSheet(sheetName.attendance);
+    
+    if (!detailSheet || !attendanceSheet) {
+      throw new Error('Required sheets not found');
+    }
+    
+    // Get all data
+    const detailData = detailSheet.getDataRange().getDisplayValues();
+    const attendanceData = attendanceSheet.getDataRange().getDisplayValues();
+    
+    // Extract codes from DiemDanhChiTiet (rows 4+)
+    const detailCodes = new Set();
+    for (let i = 3; i < detailData.length; i++) {
+      const code = String(detailData[i][0]).trim();
+      if (code && code.startsWith('GC')) {
+        detailCodes.add(code);
+      }
+    }
+    
+    Logger.log('📊 DiemDanhChiTiet has ' + detailCodes.size + ' unique attendance codes');
+    
+    // Extract codes from DiemDanh (rows 4+)
+    const attendanceCodes = new Set();
+    const orphanedRecords = [];
+    
+    for (let i = 3; i < attendanceData.length; i++) {
+      const code = String(attendanceData[i][0]).trim();
+      const dateTime = String(attendanceData[i][1]).trim();
+      const group = String(attendanceData[i][2]).trim();
+      
+      if (code && code.startsWith('GC')) {
+        attendanceCodes.add(code);
+        
+        // Check if this code exists in DiemDanhChiTiet
+        if (!detailCodes.has(code)) {
+          orphanedRecords.push({
+            row: i + 1,
+            code: code,
+            dateTime: dateTime,
+            group: group
+          });
+        }
+      }
+    }
+    
+    Logger.log('📋 DiemDanh has ' + attendanceCodes.size + ' attendance codes');
+    Logger.log('');
+    
+    if (orphanedRecords.length === 0) {
+      Logger.log('✅ PERFECT! Tất cả records trong DiemDanh đều có trong DiemDanhChiTiet');
+      return {
+        success: true,
+        orphanedCount: 0,
+        message: 'No orphaned records found'
+      };
+    }
+    
+    Logger.log('⚠️  WARNING: Found ' + orphanedRecords.length + ' orphaned records!');
+    Logger.log('    (Có trong DiemDanh nhưng KHÔNG có trong DiemDanhChiTiet)');
+    Logger.log('');
+    Logger.log('📋 Danh sách:');
+    Logger.log('─'.repeat(50));
+    
+    orphanedRecords.forEach((record, index) => {
+      if (index < 20) { // Chỉ log 20 records đầu
+        Logger.log(`   Row ${record.row}: ${record.code}`);
+        Logger.log(`      Date: ${record.dateTime}, Group: ${record.group}`);
+      }
+    });
+    
+    if (orphanedRecords.length > 20) {
+      Logger.log(`   ... và ${orphanedRecords.length - 20} records khác`);
+    }
+    
+    Logger.log('');
+    Logger.log('💡 GỢI Ý:');
+    Logger.log('   - Kiểm tra xem có phải do xóa nhầm dữ liệu trong DiemDanhChiTiet?');
+    Logger.log('   - Hoặc do điểm danh nhưng không có học viên nào (0 người)?');
+    Logger.log('   - Có thể xóa các records này khỏi DiemDanh nếu không cần thiết');
+    Logger.log('='.repeat(50));
+    
+    return {
+      success: true,
+      orphanedCount: orphanedRecords.length,
+      orphanedRecords: orphanedRecords,
+      message: 'Found orphaned records - check logs for details'
     };
     
   } catch (error) {
@@ -2382,9 +2869,9 @@ function fixMissingAttendanceRecords() {
       return;
     }
     
-    // Get all data
-    const detailData = detailSheet.getDataRange().getValues();
-    const attendanceData = attendanceSheet.getDataRange().getValues();
+    // Get all data - ✅ SỬ DỤNG getDisplayValues() để tránh lỗi Date object
+    const detailData = detailSheet.getDataRange().getDisplayValues();
+    const attendanceData = attendanceSheet.getDataRange().getDisplayValues();
     
     // Column indexes (hard-coded based on sheet structure)
     // DiemDanhChiTiet: A=attendanceCode(0), D=date(3)
@@ -2396,22 +2883,50 @@ function fixMissingAttendanceRecords() {
     
     Logger.log('📍 Using columns: DiemDanhChiTiet [A, D], DiemDanh [A, B]');
     
+    // 🔍 DEBUG: Check actual row structure
+    Logger.log('');
+    Logger.log('🔍 DEBUG: Sheet Structure');
+    Logger.log('─'.repeat(50));
+    Logger.log('DiemDanhChiTiet rows: ' + detailData.length);
+    Logger.log('  Row 1 (index 0): "' + detailData[0][0] + '"');
+    Logger.log('  Row 2 (index 1): "' + detailData[1][0] + '"');
+    Logger.log('  Row 3 (index 2): "' + detailData[2][0] + '"');
+    Logger.log('  Row 4 (index 3): "' + detailData[3][0] + '"');
+    
+    Logger.log('');
+    Logger.log('DiemDanh rows: ' + attendanceData.length);
+    Logger.log('  Row 1 (index 0): "' + attendanceData[0][0] + '"');
+    Logger.log('  Row 2 (index 1): "' + attendanceData[1][0] + '"');
+    Logger.log('  Row 3 (index 2): "' + attendanceData[2][0] + '"');
+    Logger.log('  Row 4 (index 3): "' + attendanceData[3][0] + '"');
+    Logger.log('─'.repeat(50));
+    Logger.log('');
+    
     // Extract unique attendanceCodes from DiemDanhChiTiet
     // Row 1-2 (index 0-1): Title/Metadata
     // Row 3 (index 2): Headers (attendanceCode, studentCode, ...)
     // Row 4+ (index 3+): Actual data starts here
     const detailCodes = new Set();
     const detailCodesWithDates = {}; // Map: code -> dateTime for debugging
+    let detailSkipped = 0;
     
     for (let i = 3; i < detailData.length; i++) {
       const code = String(detailData[i][detailCodeCol]).trim();
       const date = detailData[i][detailDateCol] ? String(detailData[i][detailDateCol]).trim() : '';
-      if (code) {
+      
+      // ✅ VALIDATE: Chỉ thêm nếu code bắt đầu bằng 'GC'
+      if (code && code.startsWith('GC')) {
         detailCodes.add(code);
         if (date && !detailCodesWithDates[code]) {
           detailCodesWithDates[code] = date;
         }
+      } else if (code) {
+        detailSkipped++;
       }
+    }
+    
+    if (detailSkipped > 0) {
+      Logger.log('⚠️  Skipped ' + detailSkipped + ' invalid codes in DiemDanhChiTiet');
     }
     
     Logger.log('📊 Found ' + detailCodes.size + ' unique attendance codes in DiemDanhChiTiet');
@@ -2433,16 +2948,25 @@ function fixMissingAttendanceRecords() {
     // Row 4+ (index 3+): Actual data starts here
     const existingCodes = new Set();
     const existingCodesWithDates = {}; // Map: code -> dateTime for debugging
+    let existingSkipped = 0;
     
     for (let i = 3; i < attendanceData.length; i++) {
       const code = String(attendanceData[i][attendanceCodeCol]).trim();
       const date = attendanceData[i][attendanceDateCol] ? String(attendanceData[i][attendanceDateCol]).trim() : '';
-      if (code) {
+      
+      // ✅ VALIDATE: Chỉ thêm nếu code bắt đầu bằng 'GC'
+      if (code && code.startsWith('GC')) {
         existingCodes.add(code);
         if (date && !existingCodesWithDates[code]) {
           existingCodesWithDates[code] = date;
         }
+      } else if (code) {
+        existingSkipped++;
       }
+    }
+    
+    if (existingSkipped > 0) {
+      Logger.log('⚠️  Skipped ' + existingSkipped + ' invalid codes in DiemDanh');
     }
     
     Logger.log('📊 Found ' + existingCodes.size + ' existing records in DiemDanh');
@@ -2467,6 +2991,18 @@ function fixMissingAttendanceRecords() {
     });
     
     Logger.log('🔍 Found ' + missingCodes.length + ' missing attendance records');
+    
+    // 🔍 DEBUG: Log first 10 missing codes
+    if (missingCodes.length > 0) {
+      Logger.log('📋 Missing codes (first 10):');
+      missingCodes.slice(0, 10).forEach(code => {
+        const date = detailCodesWithDates[code] || 'unknown';
+        Logger.log('   - ' + code + ' (date: ' + date + ')');
+      });
+      if (missingCodes.length > 10) {
+        Logger.log('   ... and ' + (missingCodes.length - 10) + ' more');
+      }
+    }
     
     // 🔍 DEBUG: Check specific dates 01/11/2025 - 04/11/2025
     Logger.log('');
@@ -2602,6 +3138,99 @@ function fixMissingAttendanceRecords() {
     
   } catch (error) {
     Logger.log('❌ Error in fixMissingAttendanceRecords: ' + error.toString());
+    throw error;
+  }
+}
+
+/**
+ * Check data consistency in DiemDanhChiTiet
+ * Checks if the date in attendanceCode matches the Date column
+ */
+function checkAttendanceConsistency() {
+  try {
+    Logger.log('🔍 Checking attendance data consistency...');
+    
+    const sheet = getSheet(sheetName.attendanceDetail);
+    if (!sheet) {
+      throw new Error('Sheet DiemDanhChiTiet không tồn tại');
+    }
+    
+    const data = sheet.getDataRange().getValues();
+    const errors = [];
+    let checkedCount = 0;
+    
+    // Skip headers (row 1 & 2)
+    for (let i = 2; i < data.length; i++) {
+      const row = i + 1;
+      const code = String(data[i][0]).trim();
+      const dateStr = String(data[i][3]).trim(); // Column D is index 3
+      
+      if (!code) continue;
+      
+      checkedCount++;
+      
+      // Parse code to find date part
+      // Pattern: anything - day(1-2 digits)month(3 letters)year(4 digits) - anything
+      // Example: GCBreak2-7dec2025-18001930
+      // Regex: look for -dMMMyyyy- pattern
+      const match = code.match(/-(\d{1,2})([a-z]{3})(\d{4})-/i);
+      
+      if (match) {
+        const day = parseInt(match[1], 10);
+        const monthAbbr = match[2].toLowerCase();
+        const year = parseInt(match[3], 10);
+        const month = parseMonthAbbr(monthAbbr); // 1-12
+        
+        if (month === 0) {
+          errors.push({
+            row: row,
+            code: code,
+            sheetDate: dateStr,
+            reason: 'Invalid month in code: ' + monthAbbr
+          });
+          continue;
+        }
+        
+        // Construct expected date string dd/mm/yyyy
+        const expectedDate = `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year}`;
+        
+        // Normalize sheet date
+        const sheetDateFormatted = formatDate(dateStr); // returns dd/mm/yyyy
+        
+        // Compare
+        if (expectedDate !== sheetDateFormatted) {
+          errors.push({
+            row: row,
+            code: code,
+            codeDate: expectedDate,
+            sheetDate: sheetDateFormatted,
+            reason: 'Date mismatch'
+          });
+        }
+      } else {
+        // Could not parse date from code - might be old format or invalid
+        // Only report if it looks like it SHOULD be the new format but failed, or just report as warning
+        errors.push({
+          row: row,
+          code: code,
+          sheetDate: dateStr,
+          reason: 'Could not parse date from code (format mismatch)'
+        });
+      }
+    }
+    
+    Logger.log('✅ Checked ' + checkedCount + ' rows');
+    Logger.log('❌ Found ' + errors.length + ' inconsistencies');
+    
+    return {
+      success: true,
+      totalChecked: checkedCount,
+      errorCount: errors.length,
+      errors: errors
+    };
+    
+  } catch (error) {
+    Logger.log('❌ Check consistency error: ' + error.toString());
     throw error;
   }
 }

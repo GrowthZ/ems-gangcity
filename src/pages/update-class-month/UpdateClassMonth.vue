@@ -23,6 +23,13 @@
             value-by="value"
           />
           <VaSelect
+            v-model="selectedYear"
+            label="Năm"
+            placeholder="Chọn năm"
+            :options="uniqueYears"
+            value-by="value"
+          />
+          <VaSelect
             v-model="selectedMonth"
             label="Tháng"
             placeholder="Chọn tháng"
@@ -103,10 +110,12 @@ const filter = ref('')
 const filterByFields = ref([])
 const date = new Date()
 const month = date.getMonth() + 1
+const year = date.getFullYear()
 const selectedGroup = ref('')
 const selectedTeacher = ref('')
 const selectedSubTeacher = ref('')
 const selectedLocation = ref('')
+const selectedYear = ref(2025)
 const selectedMonth = ref(month)
 const currentPage = ref(1) // Trang hiện tại
 
@@ -179,6 +188,15 @@ const uniqueLocations = computed(() => {
 //   return items.value ? uniqueTeachersArray : []
 // })
 
+const uniqueYears = computed(() => {
+  const years = [2024, 2025, 2026]
+  const uniqueArrayYear = years.map((year) => ({
+    value: year,
+    text: 'Năm ' + year.toString(),
+  }))
+  return items.value ? uniqueArrayYear : []
+})
+
 const uniqueMonths = computed(() => {
   const months = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
   const uniqueArrayMonth = months.map((month) => ({
@@ -226,8 +244,13 @@ const filteredItems = computed(() => {
 
     if (isMonthSelected) {
       if (item?.dateTime) {
-        const itemMonth = parseInt(item.dateTime.split('/')[1], 10)
+        const parts = item.dateTime.split('/')
+        const itemMonth = parseInt(parts[1], 10)
+        const itemYear = parseInt(parts[2], 10)
         if (itemMonth != parseInt(selectedMonth.value, 10)) {
+          return false
+        }
+        if (selectedYear.value && itemYear != parseInt(selectedYear.value, 10)) {
           return false
         }
       }
@@ -310,7 +333,7 @@ const computedItems = computed(() => {
   return filteredItems.value.map((item) => {
     const attendanceRecord = attendanceArray.value.find(
       (record) =>
-        record.studentCode == item.code && record.month == selectedMonth.value && record.year == date.getFullYear(),
+        record.studentCode == item.code && record.month == selectedMonth.value && record.year == selectedYear.value,
     )
     const soBuoiHocTrongThang = attendanceRecord ? attendanceRecord.soBuoiHocTrongThang : 0
     const soBuoiTieuChuan = 6 // Tiêu chuẩn mặc định mỗi tháng là 6
@@ -330,7 +353,7 @@ const alreadyUpdateChecked = computed(() => {
     return (
       row.location == selectedLocation.value &&
       selectedMonth.value == month &&
-      date.getFullYear() == year &&
+      selectedYear.value == year &&
       row.note == selectedGroup.value
     )
   })
@@ -343,7 +366,7 @@ const sendUpdateLesson = async (dataJson) => {
       location: getLocationFromCode(item.code),
       studentCode: item.code,
       studentName: item.fullname,
-      dateUpdate: selectedMonth.value + '/' + date.getFullYear(),
+      dateUpdate: selectedMonth.value + '/' + selectedYear.value,
       lesson: item.soBuoiSauDieuChinh,
       note: item.group,
     }
@@ -351,17 +374,17 @@ const sendUpdateLesson = async (dataJson) => {
   const dataToSendJson = {
     data: dataToSend,
     month: selectedMonth.value,
-    year: date.getFullYear(),
+    year: selectedYear.value,
   }
 
   const dataUpdated = await fetchDataSheet(DataSheet.studentUpdateMonth)
-  const selectedFormatted = `${Number(selectedMonth.value)}/${date.getFullYear()}`
+  const selectedFormatted = `${Number(selectedMonth.value)}/${selectedYear.value}`
   const alreadyUpdated = dataUpdated.some((row) => {
     const [month, year] = row.dateUpdate.split('/')
     return (
       row.location == selectedLocation.value &&
       selectedMonth.value == month &&
-      date.getFullYear() == year &&
+      selectedYear.value == year &&
       row.note == selectedGroup.value
     )
   })
@@ -384,7 +407,7 @@ const sendUpdateLesson = async (dataJson) => {
   data.loading = false
 }
 
-watch([selectedGroup, selectedTeacher, selectedMonth], () => {
+watch([selectedGroup, selectedTeacher, selectedMonth, selectedYear], () => {
   data.loading = true
   sleep(100).then(() => {
     data.loading = false
