@@ -286,7 +286,7 @@ const getDaysInRange = (startDate, endDate) => {
       const day = String(start.getDate()).padStart(2, '0')
       const month = String(start.getMonth() + 1).padStart(2, '0')
       const year = String(start.getFullYear())
-      
+
       // Format ngày để hiển thị: dd/mm/yyyy
       const formattedDate = `${day}/${month}/${year}`
 

@@ -22,13 +22,7 @@
             :options="uniqueLocations"
             value-by="value"
           />
-          <VaSelect
-            v-model="selectedYear"
-            label="Năm"
-            placeholder="Chọn năm"
-            :options="uniqueYears"
-            value-by="value"
-          />
+          <VaSelect v-model="selectedYear" label="Năm" placeholder="Chọn năm" :options="uniqueYears" value-by="value" />
           <VaSelect
             v-model="selectedMonth"
             label="Tháng"
@@ -115,7 +109,7 @@ const selectedGroup = ref('')
 const selectedTeacher = ref('')
 const selectedSubTeacher = ref('')
 const selectedLocation = ref('')
-const selectedYear = ref(2025)
+const selectedYear = ref(year)
 const selectedMonth = ref(month)
 const currentPage = ref(1) // Trang hiện tại
 

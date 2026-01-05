@@ -26,7 +26,6 @@ var actionHandlers = {
   'newStudent': newStudent,
   'updateStudent': updateStudent,
   'updateStudentByMonth': updateStudentByMonth,
-  'checkAttendanceConsistency': checkAttendanceConsistency,
 };
 
 let sheetName = {
@@ -156,7 +155,7 @@ function formatDate(dateInput) {
   else if (typeof dateInput === 'string') {
     const trimmed = dateInput.trim();
     
-    // Try parsing as dd/mm/yyyy or d/m/yyyy format (most common in Vietnamese context)
+    // Try parsing as dd/mm/yyyy or d/m/yyyy format (most common)
     const parts = trimmed.split('/');
     if (parts.length === 3) {
       // Assume format: day/month/year (cả 1/11/2025 và 01/11/2025 đều OK)
@@ -171,32 +170,9 @@ function formatDate(dateInput) {
         Logger.log('⚠️ Invalid date values: day=' + day + ', month=' + (month+1) + ', year=' + year);
         return String(dateInput);
       }
-    } else if (trimmed.includes('-')) {
-      // Try parsing ISO format (yyyy-mm-dd) or mm-dd-yyyy
-      const isoParts = trimmed.split('-');
-      if (isoParts.length === 3) {
-        const first = parseInt(isoParts[0], 10);
-        const second = parseInt(isoParts[1], 10);
-        const third = parseInt(isoParts[2], 10);
-        
-        // Check if it's ISO format (yyyy-mm-dd)
-        if (first > 1900) {
-          date = new Date(first, second - 1, third);
-        } else {
-          // Assume dd-mm-yyyy
-          date = new Date(third, second - 1, first);
-        }
-      }
     } else {
-      // Last resort: try to detect if it's a Date string like "Sat Dec 07 2025..."
-      // ⚠️ AVOID using new Date(string) directly as it uses MM/DD/YYYY in some locales
-      const dateObj = new Date(trimmed);
-      if (!isNaN(dateObj.getTime())) {
-        date = dateObj;
-      } else {
-        Logger.log('⚠️ Could not parse date string: ' + trimmed);
-        return String(dateInput);
-      }
+      // Try other formats (ISO, etc.)
+      date = new Date(trimmed);
     }
   }
   // Nếu là number (timestamp)
@@ -1279,50 +1255,17 @@ function updateLesson(paramString) {
 
 /**
  * Tạo studentCode tự động dựa trên location
- * Format: {locationCode}{number} (GCGT001, GCGT002, ...)
- * Tra cứu mã viết tắt từ sheet CoSo
+ * Format: {locationCode}{number} (GT001, GT002, ...)
  */
 function generateStudentCode(location) {
   try {
+    const sheet = getSheet(sheetName.student);
+    const data = sheet.getDataRange().getValues();
+    
     Logger.log('📝 Generating student code for location: ' + location);
     
-    // 1. Tra cứu locationCode từ sheet CoSo
-    const locationSheet = getSheet(sheetName.location); // CoSo
-    if (!locationSheet) {
-      throw new Error('Sheet CoSo không tồn tại');
-    }
-    
-    const locationData = locationSheet.getDataRange().getValues();
-    let locationCode = null;
-    
-    // Tìm locationCode tương ứng với location name
-    // Cấu trúc CoSo: Column A = code (GCGT), Column B = name (Gang Thép)
-    // Data bắt đầu từ row 3 (index 2)
-    for (let i = 2; i < locationData.length; i++) {
-      const row = locationData[i];
-      const code = String(row[0]).trim();  // Column A = code (GCGT)
-      const name = String(row[1]).trim();  // Column B = name (Gang Thép)
-      
-      if (name === String(location).trim()) {
-        locationCode = code;
-        Logger.log('  - Found mapping: "' + name + '" -> "' + code + '"');
-        break;
-      }
-    }
-    
-    if (!locationCode) {
-      Logger.log('⚠️ Location code not found for: ' + location + ', using location name as fallback');
-      locationCode = location; // Fallback nếu không tìm thấy
-    }
-    
-    Logger.log('  - Location code: ' + locationCode);
-    
-    // 2. Tìm số lớn nhất trong các studentCode có cùng prefix
-    const studentSheet = getSheet(sheetName.student);
-    const studentData = studentSheet.getDataRange().getValues();
-    
     // Lọc học viên theo location (bỏ qua 2 dòng header)
-    const locationStudents = studentData.filter((row, index) => 
+    const locationStudents = data.filter((row, index) => 
       index > 1 && String(row[1]).trim() === String(location).trim()
     );
     
@@ -1343,9 +1286,9 @@ function generateStudentCode(location) {
     
     Logger.log('  - Max number found: ' + maxNumber);
     
-    // 3. Tạo code mới với số tiếp theo (không padding)
-    const newNumber = maxNumber + 1;
-    const newCode = locationCode + newNumber;
+    // Tạo code mới với padding 3 chữ số
+    const newNumber = (maxNumber + 1).toString().padStart(3, '0');
+    const newCode = location + newNumber;
     
     Logger.log('  ✅ Generated new code: ' + newCode);
     
@@ -1353,7 +1296,7 @@ function generateStudentCode(location) {
   } catch (error) {
     Logger.log('❌ Generate student code error: ' + error.toString());
     // Fallback: dùng timestamp nếu có lỗi
-    return 'GC' + Date.now().toString().slice(-6);
+    return location + Date.now().toString().slice(-6);
   }
 }
 
@@ -3194,102 +3137,6 @@ function fixMissingAttendanceRecords() {
     
   } catch (error) {
     Logger.log('❌ Error in fixMissingAttendanceRecords: ' + error.toString());
-    throw error;
-  }
-}
-
-/**
- * Check data consistency in DiemDanhChiTiet
- * Checks if the date in attendanceCode matches the Date column
- */
-function checkAttendanceConsistency() {
-  try {
-    Logger.log('🔍 Checking attendance data consistency...');
-    
-    const sheet = getSheet(sheetName.attendanceDetail);
-    if (!sheet) {
-      throw new Error('Sheet DiemDanhChiTiet không tồn tại');
-    }
-    
-    // ✅ Use getDisplayValues() for date columns to avoid Date object conversion issues
-    const data = sheet.getDataRange().getValues();
-    const displayData = sheet.getDataRange().getDisplayValues();
-    const errors = [];
-    let checkedCount = 0;
-    
-    // Skip headers (row 1 & 2)
-    for (let i = 2; i < data.length; i++) {
-      const row = i + 1;
-      const code = String(data[i][0]).trim();
-      // ✅ Use displayData for date column to get the exact string as shown in spreadsheet
-      const dateStr = String(displayData[i][3]).trim(); // Column D is index 3
-      
-      if (!code) continue;
-      
-      checkedCount++;
-      
-      // Parse code to find date part
-      // Pattern: anything - day(1-2 digits)month(3 letters)year(4 digits) - anything
-      // Example: GCBreak2-7dec2025-18001930
-      // Regex: look for -dMMMyyyy- pattern
-      const match = code.match(/-(\d{1,2})([a-z]{3})(\d{4})-/i);
-      
-      if (match) {
-        const day = parseInt(match[1], 10);
-        const monthAbbr = match[2].toLowerCase();
-        const year = parseInt(match[3], 10);
-        const month = parseMonthAbbr(monthAbbr); // 1-12
-        
-        if (month === 0) {
-          errors.push({
-            row: row,
-            code: code,
-            sheetDate: dateStr,
-            reason: 'Invalid month in code: ' + monthAbbr
-          });
-          continue;
-        }
-        
-        // Construct expected date string dd/mm/yyyy
-        const expectedDate = `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year}`;
-        
-        // Normalize sheet date
-        const sheetDateFormatted = formatDate(dateStr); // returns dd/mm/yyyy
-        
-        // Compare
-        if (expectedDate !== sheetDateFormatted) {
-          errors.push({
-            row: row,
-            code: code,
-            codeDate: expectedDate,
-            sheetDate: sheetDateFormatted,
-            reason: 'Date mismatch'
-          });
-        }
-      } else {
-        // Could not parse date from code - might be old format or invalid
-        // Only report if it looks like it SHOULD be the new format but failed, or just report as warning
-        errors.push({
-          row: row,
-          code: code,
-          sheetDate: dateStr,
-          reason: 'Could not parse date from code (format mismatch)'
-        });
-      }
-    }
-    
-    Logger.log('✅ Checked ' + checkedCount + ' rows');
-    Logger.log('❌ Found ' + errors.length + ' inconsistencies');
-    
-    return {
-      success: true,
-      totalChecked: checkedCount,
-      errorCount: errors.length,
-      errors: errors
-    };
-    
-  } catch (error) {
-    Logger.log('❌ Check consistency error: ' + error.toString());
     throw error;
   }
 }
