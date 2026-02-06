@@ -42,6 +42,7 @@
             color="success"
             class="mt-4"
             :disabled="alreadyUpdateChecked"
+            :loading="loading"
             @click="sendUpdateLesson(computedItems)"
           >
             <VaIcon :name="`mso-${alreadyUpdateChecked ? 'check_circle' : 'cloud_upload'}`" class="mr-2" />
@@ -53,7 +54,6 @@
         </div>
         <!-- </VaCollapse> -->
         <VaDataTable
-          v-if="!loading"
           animation="fade-in-up"
           class="va-data-table"
           :items="computedItems"
@@ -84,7 +84,7 @@
               </div>
             </template>
           </VaDataTable> -->
-        <div v-if="!loading" class="flex justify-between items-center mb-6">
+        <div class="flex justify-between items-center mb-6">
           <div color="info" class="pt-3">
             Tổng số:
             <strong>{{ computedItems.length }}</strong>
@@ -220,9 +220,8 @@ const filteredItems = computed(() => {
       return false
     }
 
-    if (isLocationSelected && getLocationFromCode(item?.code) !== selectedLocation.value) {
-      return false
-    }
+    // Bỏ qua điều kiện check location vì có học sinh chuyển lớp
+    // Location chỉ dùng để update select group
 
     if (isGroupSelected && item?.group !== selectedGroup.value) {
       return false
@@ -280,6 +279,18 @@ const filteredItems = computed(() => {
 
     return isMatchFilter && isMatchFields
   })
+
+  // Deduplicate by student code (keep the latest entry as items are reversed)
+  const uniqueItems = []
+  const seenCodes = new Set()
+  for (const item of filtered) {
+    if (item.code && !seenCodes.has(item.code)) {
+      uniqueItems.push(item)
+      seenCodes.add(item.code)
+    }
+  }
+
+  return uniqueItems
 })
 
 const filteredGroups = computed(() => {
@@ -345,7 +356,7 @@ const alreadyUpdateChecked = computed(() => {
   return dataStudentUpdateMonth.value.some((row) => {
     const [month, year] = row.dateUpdate.split('/')
     return (
-      row.location == selectedLocation.value &&
+      // Bỏ qua check location vì có học sinh chuyển lớp
       selectedMonth.value == month &&
       selectedYear.value == year &&
       row.note == selectedGroup.value
@@ -376,7 +387,7 @@ const sendUpdateLesson = async (dataJson) => {
   const alreadyUpdated = dataUpdated.some((row) => {
     const [month, year] = row.dateUpdate.split('/')
     return (
-      row.location == selectedLocation.value &&
+      // Bỏ qua check location vì có học sinh chuyển lớp
       selectedMonth.value == month &&
       selectedYear.value == year &&
       row.note == selectedGroup.value
@@ -384,7 +395,7 @@ const sendUpdateLesson = async (dataJson) => {
   })
   if (alreadyUpdated) {
     showMessageBox(
-      `Dữ liệu đã được cập nhật trong tháng ${selectedFormatted} cho cơ sở ${selectedLocation.value} / ${selectedGroup.value} !`,
+      `Dữ liệu đã được cập nhật trong tháng ${selectedFormatted} cho lớp ${selectedGroup.value} !`,
       'error',
     )
     data.loading = false

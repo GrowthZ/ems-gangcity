@@ -232,6 +232,19 @@ function normalizeDate(dateInput) {
   return formatted;
 }
 
+/**
+ * So sánh 2 ngày sau khi normalize
+ * "7/12/2025" và "07/12/2025" sẽ bằng nhau
+ * @param {string|Date} date1 - Ngày 1
+ * @param {string|Date} date2 - Ngày 2
+ * @return {boolean} - true nếu 2 ngày giống nhau
+ */
+function compareDates(date1, date2) {
+  const normalized1 = normalizeDate(date1);
+  const normalized2 = normalizeDate(date2);
+  return normalized1 === normalized2;
+}
+
 // ============================================
 // ACTION HANDLERS - GHI/CẬP NHẬT DỮ LIỆU
 // ============================================
@@ -590,9 +603,13 @@ function deleteOldAttendance(code, nameSheet) {
     const data = sheet.getDataRange().getValues();
     const rowsToDelete = [];
     
+    // Normalize code để so sánh
+    const normalizedCode = String(code).trim();
+    
     // Tìm tất cả rows có attendanceCode trùng (bỏ qua 2 dòng header)
     for (let i = data.length - 1; i >= 2; i--) {
-      if (data[i][0] === code) {
+      const rowCode = String(data[i][0]).trim();
+      if (rowCode === normalizedCode) {
         rowsToDelete.push(i + 1); // Convert to 1-based index
       }
     }
@@ -602,7 +619,7 @@ function deleteOldAttendance(code, nameSheet) {
       sheet.deleteRow(rowIndex);
     });
     
-    Logger.log('🗑️ Deleted ' + rowsToDelete.length + ' rows from ' + nameSheet);
+    Logger.log('🗑️ Deleted ' + rowsToDelete.length + ' rows from ' + nameSheet + ' for code: ' + normalizedCode);
   } catch (error) {
     Logger.log('❌ Delete old attendance error: ' + error.toString());
   }
@@ -1409,11 +1426,29 @@ function newStudent(paramString) {
     
     Logger.log('✅ Thêm học viên mới: ' + studentCode);
     
-    // Tạo student follow
-    param.code = studentCode; // Update code cho createStudentFollow
-    createStudentFollow(param);
+    // ✅ QUAN TRỌNG: Tạo student follow với retry mechanism
+    param.code = studentCode;
+    let followCreated = false;
+    let retryCount = 0;
+    const maxRetries = 3;
     
-    return { ...param, code: studentCode }; // ✅ Trả về code đã tạo
+    while (!followCreated && retryCount < maxRetries) {
+      try {
+        createStudentFollow(param);
+        followCreated = true;
+        Logger.log('✅ Student follow đã được tạo thành công');
+      } catch (followError) {
+        retryCount++;
+        Logger.log('⚠️ Retry ' + retryCount + '/' + maxRetries + ' - createStudentFollow: ' + followError.toString());
+        if (retryCount >= maxRetries) {
+          Logger.log('❌ CRITICAL: Không thể tạo student follow sau ' + maxRetries + ' lần thử!');
+          // Không throw error để không rollback việc tạo student, nhưng log rõ ràng
+        }
+        Utilities.sleep(500); // Đợi 500ms trước khi retry
+      }
+    }
+    
+    return { ...param, code: studentCode, followCreated: followCreated };
   } catch (error) {
     Logger.log('❌ New student error: ' + error.toString());
     throw error;
@@ -1422,51 +1457,53 @@ function newStudent(paramString) {
 
 /**
  * Tạo student follow (theo dõi học viên)
+ * ✅ IMPROVED: Throw error nếu fail để caller biết và có thể retry
  */
 function createStudentFollow(student) {
-  try {
-    const sheet = getSheet(sheetName.studentFollow);
-    if (!sheet) {
-      Logger.log('⚠️ Sheet KiemSoatBuoiHoc không tồn tại');
-      return;
-    }
-    
-    const data = sheet.getDataRange().getValues();
-    
-    // Check trùng với trim và so sánh loose (== giống logic cũ)
-    const isExist = data.some((row, index) => 
-      index > 1 && String(row[0]).trim() == String(student.code).trim()
-    );
-    
-    if (isExist) {
-      Logger.log('⚠️ Student follow đã tồn tại: ' + student.code);
-      return;
-    }
-    
-    const studentFollow = [student.code];
-    sheet.appendRow(studentFollow);
-    
-    const newRow = sheet.getLastRow();
-    
-    // Set formulas theo logic cũ
-    const formulaFullName = `=IFERROR(VLOOKUP(A${newRow}, ${sheetName.student}!A:C, 3, FALSE), "")`;
-    const formulaGroup = `=IFERROR(VLOOKUP(A${newRow}, ${sheetName.student}!A:E, 5, FALSE), "")`;
-    const formulaDongHoc = `=COUNTIF(${sheetName.payment}!A:A, A${newRow})`;
-    const formulaTong = `=ARRAYFORMULA(SUMIFS(${sheetName.payment}!$F$4:F, ${sheetName.payment}!$A$4:A, A${newRow}) + SUMIFS(${sheetName.lessonUpdate}!$D$4:D, ${sheetName.lessonUpdate}!$A$4:A, A${newRow}))`;
-    const formulaDaHoc = `=COUNTIF(${sheetName.attendanceDetail}!B:B, A${newRow})`;
-    const formulaConLai = `=E${newRow}-F${newRow}`;
-    
-    sheet.getRange(`B${newRow}`).setFormula(formulaFullName);
-    sheet.getRange(`C${newRow}`).setFormula(formulaGroup);
-    sheet.getRange(`D${newRow}`).setFormula(formulaDongHoc);
-    sheet.getRange(`E${newRow}`).setFormula(formulaTong);
-    sheet.getRange(`F${newRow}`).setFormula(formulaDaHoc);
-    sheet.getRange(`G${newRow}`).setFormula(formulaConLai);
-    
-    Logger.log('✅ Tạo student follow thành công');
-  } catch (error) {
-    Logger.log('❌ Create student follow error: ' + error.toString());
+  const sheet = getSheet(sheetName.studentFollow);
+  if (!sheet) {
+    throw new Error('Sheet KiemSoatBuoiHoc không tồn tại');
   }
+  
+  const data = sheet.getDataRange().getValues();
+  
+  // Check trùng với trim và so sánh loose (== giống logic cũ)
+  const isExist = data.some((row, index) => 
+    index > 1 && String(row[0]).trim() == String(student.code).trim()
+  );
+  
+  if (isExist) {
+    Logger.log('ℹ️ Student follow đã tồn tại: ' + student.code);
+    return; // Đã tồn tại thì không cần tạo mới, không phải lỗi
+  }
+  
+  const studentFollow = [student.code];
+  sheet.appendRow(studentFollow);
+  
+  const newRow = sheet.getLastRow();
+  
+  // Verify append thành công
+  const verifyCode = sheet.getRange(`A${newRow}`).getValue();
+  if (String(verifyCode).trim() !== String(student.code).trim()) {
+    throw new Error('Append row thất bại - mã không khớp');
+  }
+  
+  // Set formulas theo logic cũ
+  const formulaFullName = `=IFERROR(VLOOKUP(A${newRow}, ${sheetName.student}!A:C, 3, FALSE), "")`;
+  const formulaGroup = `=IFERROR(VLOOKUP(A${newRow}, ${sheetName.student}!A:E, 5, FALSE), "")`;
+  const formulaDongHoc = `=COUNTIF(${sheetName.payment}!A:A, A${newRow})`;
+  const formulaTong = `=ARRAYFORMULA(SUMIFS(${sheetName.payment}!$F$4:F, ${sheetName.payment}!$A$4:A, A${newRow}) + SUMIFS(${sheetName.lessonUpdate}!$D$4:D, ${sheetName.lessonUpdate}!$A$4:A, A${newRow}))`;
+  const formulaDaHoc = `=COUNTIF(${sheetName.attendanceDetail}!B:B, A${newRow})`;
+  const formulaConLai = `=E${newRow}-F${newRow}`;
+  
+  sheet.getRange(`B${newRow}`).setFormula(formulaFullName);
+  sheet.getRange(`C${newRow}`).setFormula(formulaGroup);
+  sheet.getRange(`D${newRow}`).setFormula(formulaDongHoc);
+  sheet.getRange(`E${newRow}`).setFormula(formulaTong);
+  sheet.getRange(`F${newRow}`).setFormula(formulaDaHoc);
+  sheet.getRange(`G${newRow}`).setFormula(formulaConLai);
+  
+  Logger.log('✅ Tạo student follow thành công: ' + student.code + ' (row ' + newRow + ')');
 }
 
 /**
@@ -1531,10 +1568,42 @@ function updateStudentByMonth(paramString) {
     const sheet = getSheet(sheetName.studentMonthUpdate);
     const dataArray = param.data || [param];
 
+    // Read existing data to check for duplicates
+    const existingData = sheet.getDataRange().getValues();
+    const existingRecords = new Set();
+    
+    // Build a set of existing studentCode + dateUpdate combinations
+    // Skip headers (first 3 rows based on standard format)
+    for (let i = 3; i < existingData.length; i++) {
+      const studentCode = String(existingData[i][1]).trim(); // Column B (studentCode)
+      const dateUpdate = normalizeDate(existingData[i][3]); // Column D (dateUpdate)
+      if (studentCode && dateUpdate) {
+        const key = `${studentCode}|${dateUpdate}`;
+        existingRecords.add(key);
+      }
+    }
+
+    let insertedCount = 0;
+    let skippedCount = 0;
+    const skippedItems = [];
+
     dataArray.forEach(item => {
+      const studentCode = String(item.studentCode || '').trim();
+      const dateUpdate = normalizeDate(item.dateUpdate);
+      const key = `${studentCode}|${dateUpdate}`;
+
+      // Check if this combination already exists
+      if (existingRecords.has(key)) {
+        console.log(`⚠️ Duplicate detected, skipping: ${studentCode} - ${dateUpdate}`);
+        skippedCount++;
+        skippedItems.push({ studentCode, dateUpdate });
+        return; // Skip this record
+      }
+
+      // Insert the record
       const rowData = [
         item.location || '',
-        item.studentCode || '',
+        studentCode,
         item.studentName || '',
         formatDate(item.dateUpdate) || '', // ✅ FORMAT về dd/mm/yyyy
         item.lesson || 0,
@@ -1545,10 +1614,22 @@ function updateStudentByMonth(paramString) {
       
       // ✅ ÉP FORMAT TEXT cho cột dateUpdate (D) để tránh Google Sheets parse nhầm
       sheet.getRange(`D${newRow}`).setNumberFormat('@');
+      
+      // Add to existingRecords set to prevent duplicates within the same batch
+      existingRecords.add(key);
+      insertedCount++;
     });
 
-    console.log('✅ Cập nhật tháng thành công:', dataArray.length, 'records');
-    return { success: true, message: 'Cập nhật thành công', count: dataArray.length };
+    const message = `Cập nhật thành công: ${insertedCount} records inserted, ${skippedCount} duplicates skipped`;
+    console.log(`✅ ${message}`);
+    
+    return { 
+      success: true, 
+      message: message,
+      inserted: insertedCount,
+      skipped: skippedCount,
+      skippedItems: skippedItems
+    };
   } catch (error) {
     console.error('Update student by month error:', error);
     throw error;
@@ -3290,6 +3371,194 @@ function checkAttendanceConsistency() {
     
   } catch (error) {
     Logger.log('❌ Check consistency error: ' + error.toString());
+    throw error;
+  }
+}
+
+// ============================================
+// UTILITY SCRIPTS - FIX ISSUES
+// ============================================
+
+/**
+ * Đổi mã học viên từ "Gang Thép" sang "GCGT"
+ * 
+ * Chạy function này để fix các student codes bị sai prefix.
+ * - Tìm tất cả student codes bắt đầu bằng "Gang Thép" 
+ * - Đổi sang prefix "GCGT" và giữ nguyên số
+ * - Cập nhật trong tất cả các sheet liên quan
+ * 
+ * @param {boolean} dryRun - Nếu true, chỉ preview không thay đổi (mặc định: true)
+ */
+function fixStudentCodesGangThep(dryRun) {
+  if (dryRun === undefined) dryRun = true;
+  
+  try {
+    Logger.log('========================================');
+    Logger.log('🔧 FIX STUDENT CODES: Gang Thép → GCGT');
+    Logger.log('Mode: ' + (dryRun ? 'DRY RUN (Preview)' : '⚠️ EXECUTE (Real Changes)'));
+    Logger.log('========================================');
+    
+    // Các sheet cần update
+    const sheetsToUpdate = [
+      { name: sheetName.student, codeColumn: 0, description: 'DanhSach' },
+      { name: sheetName.studentFollow, codeColumn: 0, description: 'KiemSoatBuoiHoc' },
+      { name: sheetName.attendanceDetail, codeColumn: 1, description: 'DiemDanhChiTiet (studentCode)' },
+      { name: sheetName.payment, codeColumn: 0, description: 'DongHoc (studentCode)' },
+      { name: sheetName.lessonUpdate, codeColumn: 0, description: 'DieuChinh (studentCode)' },
+      { name: sheetName.studentMonthUpdate, codeColumn: 1, description: 'DieuChinhTheoQuyDinh (studentCode)' },
+      { name: sheetName.attendanceMissing, codeColumn: 2, description: 'DiemDanhNghi (studentCode)' }
+    ];
+    
+    const PREFIX_OLD = 'Gang Thép';
+    const PREFIX_NEW = 'GCGT';
+    const HEADER_ROWS = 2;
+    
+    let totalChanges = 0;
+    const allChanges = [];
+    
+    sheetsToUpdate.forEach(sheetInfo => {
+      const sheet = getSheet(sheetInfo.name);
+      if (!sheet) {
+        Logger.log('⚠️ Sheet không tồn tại: ' + sheetInfo.name);
+        return;
+      }
+      
+      const data = sheet.getDataRange().getValues();
+      const changes = [];
+      
+      for (let i = HEADER_ROWS; i < data.length; i++) {
+        const oldCode = String(data[i][sheetInfo.codeColumn]).trim();
+        
+        if (oldCode.startsWith(PREFIX_OLD)) {
+          const numberPart = oldCode.replace(PREFIX_OLD, '');
+          const newCode = PREFIX_NEW + numberPart;
+          
+          changes.push({
+            row: i + 1,
+            oldCode: oldCode,
+            newCode: newCode
+          });
+          
+          if (!dryRun) {
+            sheet.getRange(i + 1, sheetInfo.codeColumn + 1).setValue(newCode);
+          }
+        }
+      }
+      
+      if (changes.length > 0) {
+        Logger.log('');
+        Logger.log('📋 ' + sheetInfo.description + ': ' + changes.length + ' changes');
+        changes.forEach(c => {
+          Logger.log('  Row ' + c.row + ': "' + c.oldCode + '" → "' + c.newCode + '"');
+        });
+        totalChanges += changes.length;
+        allChanges.push({ sheet: sheetInfo.description, changes: changes });
+      }
+    });
+    
+    Logger.log('');
+    Logger.log('========================================');
+    Logger.log('📊 SUMMARY: Total changes = ' + totalChanges);
+    Logger.log(dryRun ? '⚠️ DRY RUN - Để thực hiện: fixStudentCodesGangThep(false)' : '✅ Đã thực hiện ' + totalChanges + ' thay đổi');
+    Logger.log('========================================');
+    
+    return { success: true, dryRun: dryRun, totalChanges: totalChanges, details: allChanges };
+    
+  } catch (error) {
+    Logger.log('❌ Error: ' + error.toString());
+    throw error;
+  }
+}
+
+/**
+ * Sync học sinh thiếu vào KiemSoatBuoiHoc
+ * 
+ * Tìm các học sinh có trong DanhSach (status = "Đang học") 
+ * nhưng chưa có trong KiemSoatBuoiHoc và tạo student follow cho họ.
+ * 
+ * @param {boolean} dryRun - Nếu true, chỉ preview không thay đổi (mặc định: true)
+ */
+function syncMissingStudentFollows(dryRun) {
+  if (dryRun === undefined) dryRun = true;
+  
+  try {
+    Logger.log('========================================');
+    Logger.log('🔄 SYNC MISSING STUDENT FOLLOWS');
+    Logger.log('Mode: ' + (dryRun ? 'DRY RUN (Preview)' : '⚠️ EXECUTE (Real Changes)'));
+    Logger.log('========================================');
+    
+    const HEADER_ROWS = 2;
+    
+    // 1. Lấy danh sách học sinh đang học từ DanhSach
+    const studentSheet = getSheet(sheetName.student);
+    if (!studentSheet) throw new Error('Sheet DanhSach không tồn tại');
+    
+    const studentData = studentSheet.getDataRange().getValues();
+    const studyingStudents = [];
+    
+    for (let i = HEADER_ROWS; i < studentData.length; i++) {
+      const code = String(studentData[i][0]).trim();
+      const status = String(studentData[i][9]).trim();
+      const fullname = String(studentData[i][2]).trim();
+      const group = String(studentData[i][4]).trim();
+      
+      if (status === 'Đang học' && code) {
+        studyingStudents.push({ code, fullname, group });
+      }
+    }
+    
+    Logger.log('📊 Học sinh đang học: ' + studyingStudents.length);
+    
+    // 2. Lấy danh sách mã từ KiemSoatBuoiHoc
+    const followSheet = getSheet(sheetName.studentFollow);
+    if (!followSheet) throw new Error('Sheet KiemSoatBuoiHoc không tồn tại');
+    
+    const followData = followSheet.getDataRange().getValues();
+    const existingCodes = new Set();
+    
+    for (let i = HEADER_ROWS; i < followData.length; i++) {
+      const code = String(followData[i][0]).trim();
+      if (code) existingCodes.add(code);
+    }
+    
+    Logger.log('📊 Đã có trong KiemSoatBuoiHoc: ' + existingCodes.size);
+    
+    // 3. Tìm học sinh thiếu
+    const missingStudents = studyingStudents.filter(s => !existingCodes.has(s.code));
+    
+    Logger.log('🔍 Học sinh thiếu: ' + missingStudents.length);
+    
+    if (missingStudents.length === 0) {
+      Logger.log('✅ Không có học sinh nào thiếu!');
+      return { success: true, dryRun, missingCount: 0, syncedCount: 0 };
+    }
+    
+    // 4. Tạo student follow
+    let syncedCount = 0;
+    
+    missingStudents.forEach((student, index) => {
+      Logger.log('  ' + (index + 1) + '. ' + student.code + ' - ' + student.fullname + ' (' + student.group + ')');
+      
+      if (!dryRun) {
+        try {
+          createStudentFollow(student);
+          syncedCount++;
+        } catch (e) {
+          Logger.log('    ❌ Lỗi: ' + e.toString());
+        }
+      }
+    });
+    
+    Logger.log('');
+    Logger.log('========================================');
+    Logger.log('📊 SUMMARY: Missing = ' + missingStudents.length);
+    Logger.log(dryRun ? '⚠️ DRY RUN - Để thực hiện: syncMissingStudentFollows(false)' : '✅ Đã sync ' + syncedCount + '/' + missingStudents.length);
+    Logger.log('========================================');
+    
+    return { success: true, dryRun, missingCount: missingStudents.length, syncedCount: dryRun ? 0 : syncedCount, missingStudents };
+    
+  } catch (error) {
+    Logger.log('❌ Error: ' + error.toString());
     throw error;
   }
 }
