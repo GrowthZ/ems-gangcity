@@ -327,11 +327,11 @@ const attendanceByMonth = computed(() => {
 const attendanceArray = computed(() => Object.values(attendanceByMonth.value))
 
 const canUpdate = computed(() => {
-  const isLocationValid = selectedLocation.value && selectedLocation.value !== 'Tất cả'
   const isGroupValid = selectedGroup.value && selectedGroup.value !== 'Tất cả'
   const isMonthValid = selectedMonth.value && selectedMonth.value !== 'Tất cả'
+  const isYearValid = !!selectedYear.value
 
-  return isLocationValid && isGroupValid && isMonthValid
+  return isGroupValid && isMonthValid && isYearValid
 })
 
 const computedItems = computed(() => {
@@ -422,7 +422,12 @@ watch([selectedGroup, selectedTeacher, selectedMonth, selectedYear], () => {
 })
 
 watch(selectedLocation, (newValue) => {
-  if (newValue) {
+  if (!selectedGroup.value) {
+    return
+  }
+
+  const availableGroups = new Set(uniqueGroups.value.map((option) => option.value).filter(Boolean))
+  if (!availableGroups.has(selectedGroup.value)) {
     selectedGroup.value = ''
   }
 })

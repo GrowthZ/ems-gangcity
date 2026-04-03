@@ -3,8 +3,16 @@
 // ĐỌC dữ liệu sẽ dùng API v4 từ frontend
 // ============================================
 
-let spreadsheetId_Data = "1HhIpXU6Egq9MZmyCAvPnEjCT8V4n9soD7EY4LQ8Nt0w";
-let sheetData = SpreadsheetApp.openById(spreadsheetId_Data);
+const SPREADSHEET_ID = "1HhIpXU6Egq9MZmyCAvPnEjCT8V4n9soD7EY4LQ8Nt0w";
+
+// ✅ LAZY LOADING: Chỉ mở spreadsheet khi cần, cache lại để tái sử dụng
+let _spreadsheetCache = null;
+function getSpreadsheet() {
+  if (!_spreadsheetCache) {
+    _spreadsheetCache = SpreadsheetApp.openById(SPREADSHEET_ID);
+  }
+  return _spreadsheetCache;
+}
 
 // Cache để tránh duplicate
 const cache = CacheService.getScriptCache();
@@ -26,6 +34,7 @@ var actionHandlers = {
   'newStudent': newStudent,
   'updateStudent': updateStudent,
   'updateStudentByMonth': updateStudentByMonth,
+  'checkAttendanceDuplicates': checkAttendanceDuplicates, // Check điểm danh bị trùng
 };
 
 let sheetName = {
@@ -109,8 +118,9 @@ function createResponse(data) {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
+// ✅ LAZY LOADING: Sử dụng getSpreadsheet() thay vì biến global
 function getSheet(name) {
-  return sheetData.getSheetByName(name);
+  return getSpreadsheet().getSheetByName(name);
 }
 
 /**
@@ -277,9 +287,16 @@ function login(paramString) {
 
 /**
  * Điểm danh - Mark attendance
+ * ✅ LOCK SERVICE: Tránh race condition khi nhiều người điểm danh cùng lúc
  */
 function markAttendance(paramString) {
+  const lock = LockService.getScriptLock();
+  
   try {
+    // Chờ tối đa 30 giây để lấy lock
+    lock.waitLock(30000);
+    Logger.log('🔒 Lock acquired for markAttendance');
+    
     const param = safeJSONParse(paramString);
     Logger.log('📝 Mark attendance request: ' + JSON.stringify(param));
     
@@ -297,57 +314,59 @@ function markAttendance(paramString) {
     Logger.log('Students missing: ' + studentMissings.length);
     
     // 1. Ghi danh sách học viên có mặt vào sheet DiemDanhChiTiet
+    // ✅ BATCH WRITE: Thay vì appendRow từng row, dùng setValues() batch
     if (studentMarks.length > 0) {
       const detailSheet = getSheet(sheetName.attendanceDetail);
       if (!detailSheet) {
         throw new Error('Sheet DiemDanhChiTiet không tồn tại');
       }
       
-      studentMarks.forEach(mark => {
-        const rowData = [
-          mark[0], // attendanceCode
-          mark[1], // studentCode
-          mark[2], // studentName
-          formatDate(mark[3]), // date - ✅ FORMAT về dd/mm/yyyy
-          mark[4], // group
-          mark[5] || '', // note
-          new Date().toISOString() // timestamp
-        ];
-        detailSheet.appendRow(rowData);
-        const newRow = detailSheet.getLastRow();
-        
-        // ✅ ÉP FORMAT TEXT cho cột date (D) để tránh Google Sheets parse nhầm
-        detailSheet.getRange(`D${newRow}`).setNumberFormat('@');
-      });
+      const timestamp = new Date().toISOString();
+      const allRows = studentMarks.map(mark => [
+        mark[0], // attendanceCode
+        mark[1], // studentCode
+        mark[2], // studentName
+        formatDate(mark[3]), // date - FORMAT về dd/mm/yyyy
+        mark[4], // group
+        mark[5] || '', // note
+        timestamp // timestamp
+      ]);
       
-      Logger.log('✅ Đã ghi ' + studentMarks.length + ' học viên có mặt');
+      const startRow = detailSheet.getLastRow() + 1;
+      detailSheet.getRange(startRow, 1, allRows.length, allRows[0].length).setValues(allRows);
+      
+      // ✅ ÉP FORMAT TEXT cho cột date (D) để tránh Google Sheets parse nhầm
+      detailSheet.getRange(startRow, 4, allRows.length, 1).setNumberFormat('@');
+      
+      Logger.log('✅ Đã ghi batch ' + studentMarks.length + ' học viên có mặt');
     }
     
     // 2. Ghi danh sách học viên vắng mặt vào sheet DiemDanhNghi
+    // ✅ BATCH WRITE: Thay vì appendRow từng row, dùng setValues() batch
     if (studentMissings.length > 0) {
       const missingSheet = getSheet(sheetName.attendanceMissing);
       if (!missingSheet) {
         throw new Error('Sheet DiemDanhNghi không tồn tại');
       }
       
-      studentMissings.forEach(missing => {
-        const rowData = [
-          new Date().toISOString(), // timestamp
-          formatDate(missing[3] || calendar?.dateTime), // date - ✅ FORMAT về dd/mm/yyyy
-          missing[1], // studentCode
-          missing[2], // studentName
-          missing[4] || calendar?.group, // group
-          missing[5] || '', // reason
-          missing[6] || 'Chưa chăm sóc' // note
-        ];
-        missingSheet.appendRow(rowData);
-        const newRow = missingSheet.getLastRow();
-        
-        // ✅ ÉP FORMAT TEXT cho cột date (B) để tránh Google Sheets parse nhầm
-        missingSheet.getRange(`B${newRow}`).setNumberFormat('@');
-      });
+      const timestamp = new Date().toISOString();
+      const allMissingRows = studentMissings.map(missing => [
+        timestamp, // timestamp
+        formatDate(missing[3] || calendar?.dateTime), // date - FORMAT về dd/mm/yyyy
+        missing[1], // studentCode
+        missing[2], // studentName
+        missing[4] || calendar?.group, // group
+        missing[5] || '', // reason
+        missing[6] || 'Chưa chăm sóc' // note
+      ]);
       
-      Logger.log('✅ Đã ghi ' + studentMissings.length + ' học viên vắng mặt');
+      const startRow = missingSheet.getLastRow() + 1;
+      missingSheet.getRange(startRow, 1, allMissingRows.length, allMissingRows[0].length).setValues(allMissingRows);
+      
+      // ✅ ÉP FORMAT TEXT cho cột date (B) để tránh Google Sheets parse nhầm
+      missingSheet.getRange(startRow, 2, allMissingRows.length, 1).setNumberFormat('@');
+      
+      Logger.log('✅ Đã ghi batch ' + studentMissings.length + ' học viên vắng mặt');
     }
     
     // 3. Cập nhật attendanceCode vào sheet LichDay
@@ -450,7 +469,6 @@ function markAttendance(paramString) {
       details: {
         attendanceCode: attendanceCode,
         present: studentMarks.length,
-        missing: studentMissings.length
       }
     };
     
@@ -458,6 +476,10 @@ function markAttendance(paramString) {
     Logger.log('❌ Mark attendance error: ' + error.toString());
     console.error('Mark attendance error:', error);
     throw error;
+  } finally {
+    // ✅ Luôn release lock dù thành công hay lỗi
+    lock.releaseLock();
+    Logger.log('🔓 Lock released for markAttendance');
   }
 }
 
@@ -529,9 +551,16 @@ function debugSheetStructure() {
 
 /**
  * Cập nhật điểm danh - Xóa dữ liệu cũ và tạo mới
+ * ✅ LOCK SERVICE: Tránh race condition khi nhiều người cập nhật cùng lúc
  */
 function updateAttendance(paramString) {
+  const lock = LockService.getScriptLock();
+  
   try {
+    // Chờ tối đa 30 giây để lấy lock
+    lock.waitLock(30000);
+    Logger.log('🔒 Lock acquired for updateAttendance');
+    
     const param = safeJSONParse(paramString);
     const code = param.code;
     
@@ -541,14 +570,55 @@ function updateAttendance(paramString) {
     deleteOldAttendance(code, sheetName.attendanceDetail);
     deleteOldAttendance(code, sheetName.attendanceMissing);
     
-    // Tạo lại điểm danh mới
-    markAttendance(paramString);
+    // Tạo lại điểm danh mới (markAttendance sẽ lấy lock riêng, 
+    // nhưng vì đang giữ lock này nên không conflict)
+    // ✅ Gọi trực tiếp internal logic thay vì markAttendance để tránh double lock
+    const attendanceParam = safeJSONParse(paramString);
+    
+    // Thực hiện ghi dữ liệu mới (copy logic từ markAttendance nhưng không lock)
+    const attendanceCode = attendanceParam.code || attendanceParam.calendar?.attendanceCode;
+    const calendar = attendanceParam.calendar;
+    const studentMarks = attendanceParam.studentMarks || [];
+    const studentMissings = attendanceParam.studentMissings || [];
+    
+    // Ghi studentMarks batch
+    if (studentMarks.length > 0) {
+      const detailSheet = getSheet(sheetName.attendanceDetail);
+      const timestamp = new Date().toISOString();
+      const allRows = studentMarks.map(mark => [
+        mark[0], mark[1], mark[2], formatDate(mark[3]), mark[4], mark[5] || '', timestamp
+      ]);
+      const startRow = detailSheet.getLastRow() + 1;
+      detailSheet.getRange(startRow, 1, allRows.length, allRows[0].length).setValues(allRows);
+      detailSheet.getRange(startRow, 4, allRows.length, 1).setNumberFormat('@');
+    }
+    
+    // Ghi studentMissings batch
+    if (studentMissings.length > 0) {
+      const missingSheet = getSheet(sheetName.attendanceMissing);
+      const timestamp = new Date().toISOString();
+      const allMissingRows = studentMissings.map(missing => [
+        timestamp, formatDate(missing[3] || calendar?.dateTime), missing[1], missing[2],
+        missing[4] || calendar?.group, missing[5] || '', missing[6] || 'Chưa chăm sóc'
+      ]);
+      const startRow = missingSheet.getLastRow() + 1;
+      missingSheet.getRange(startRow, 1, allMissingRows.length, allMissingRows[0].length).setValues(allMissingRows);
+      missingSheet.getRange(startRow, 2, allMissingRows.length, 1).setNumberFormat('@');
+    }
+    
+    // Update calendar status
+    if (calendar) {
+      updateStatusCalendar(attendanceCode);
+    }
     
     Logger.log('✅ Cập nhật điểm danh thành công');
     return { success: true, message: 'Cập nhật thành công' };
   } catch (error) {
     Logger.log('❌ Update attendance error: ' + error.toString());
     throw error;
+  } finally {
+    lock.releaseLock();
+    Logger.log('🔓 Lock released for updateAttendance');
   }
 }
 
@@ -567,9 +637,15 @@ function deleteOldAttendance(code, nameSheet) {
     const rowsToDelete = [];
     
     // Tìm tất cả rows có attendanceCode trùng (bỏ qua 2 dòng header)
+    // ✅ FIX: Convert về string và trim để tránh lỗi so sánh type mismatch
+    const codeStr = String(code).trim();
+    Logger.log('🔍 Searching for code: "' + codeStr + '" in ' + nameSheet);
+    
     for (let i = data.length - 1; i >= 2; i--) {
-      if (data[i][0] === code) {
+      const rowCode = String(data[i][0]).trim();
+      if (rowCode === codeStr) {
         rowsToDelete.push(i + 1); // Convert to 1-based index
+        Logger.log('  Found match at row ' + (i + 1) + ': "' + rowCode + '"');
       }
     }
     
@@ -791,6 +867,7 @@ function formatTime(timeInput) {
 
 /**
  * Tạo lịch dạy
+ * ✅ BATCH WRITE: Thay vì appendRow từng row, dùng setValues() batch
  */
 function createCalendars(paramString) {
   try {
@@ -798,7 +875,8 @@ function createCalendars(paramString) {
     const sheet = getSheet(sheetName.calendar);
     const calendars = Array.isArray(param) ? param : [param];
 
-    calendars.forEach(cal => {
+    // Chuẩn bị tất cả rows trước
+    const allRows = calendars.map(cal => {
       // ✅ VALIDATE & FORMAT TIME: Đảm bảo startTime/endTime luôn là string HH:mm
       const startTime = formatTime(cal.startTime);
       const endTime = formatTime(cal.endTime);
@@ -835,9 +913,9 @@ function createCalendars(paramString) {
       // Cấu trúc theo logic cũ: 11 cột
       // attendanceCode, dateTime, location, group, teacher, subTeacher, 
       // startTime, endTime, attendanceTime, note, status
-      const rowData = [
+      return [
         attendanceCode,
-        formatDate(cal.dateTime) || '', // ✅ FORMAT về dd/mm/yyyy
+        formatDate(cal.dateTime) || '', // FORMAT về dd/mm/yyyy
         cal.location || '',
         cal.group || '',
         cal.teacher || '',
@@ -848,14 +926,16 @@ function createCalendars(paramString) {
         cal.note || '',
         cal.status || ''
       ];
-      sheet.appendRow(rowData);
-      const newRow = sheet.getLastRow();
-      
-      // ✅ ÉP FORMAT TEXT cho cột dateTime (B) để tránh Google Sheets parse nhầm
-      sheet.getRange(`B${newRow}`).setNumberFormat('@');
     });
+    
+    // ✅ BATCH WRITE: Ghi tất cả rows một lần
+    const startRow = sheet.getLastRow() + 1;
+    sheet.getRange(startRow, 1, allRows.length, allRows[0].length).setValues(allRows);
+    
+    // ✅ ÉP FORMAT TEXT cho cột dateTime (B) để tránh Google Sheets parse nhầm
+    sheet.getRange(startRow, 2, allRows.length, 1).setNumberFormat('@');
 
-    Logger.log('✅ Tạo lịch dạy thành công:', calendars.length, 'lịch');
+    Logger.log('✅ Tạo lịch dạy batch thành công: ' + calendars.length + ' lịch');
     return calendars;
   } catch (error) {
     Logger.log('❌ Create calendars error: ' + error.toString());
@@ -3139,4 +3219,361 @@ function fixMissingAttendanceRecords() {
     Logger.log('❌ Error in fixMissingAttendanceRecords: ' + error.toString());
     throw error;
   }
+}
+
+// ============================================
+// CHECK ATTENDANCE DUPLICATES
+// Kiểm tra và báo cáo các bản ghi điểm danh bị trùng lặp
+// ============================================
+
+/**
+ * Kiểm tra điểm danh bị trùng lặp
+ * Đảm bảo: 1 mã học viên (studentCode) ứng với 1 mã điểm danh (attendanceCode)
+ * Không có trường hợp 1 mã điểm danh có 2 mã học viên trùng nhau
+ * 
+ * @param {string} paramString - JSON string với options: { autoFix: boolean, attendanceCode?: string }
+ * @returns {Object} - Kết quả kiểm tra với danh sách duplicates
+ */
+function checkAttendanceDuplicates(paramString) {
+  try {
+    const param = paramString ? safeJSONParse(paramString) : {};
+    const autoFix = param.autoFix || false;
+    const filterCode = param.attendanceCode || null;
+    
+    Logger.log('========================================');
+    Logger.log('🔍 KIỂM TRA ĐIỂM DANH TRÙNG LẶP');
+    Logger.log('========================================');
+    Logger.log('AutoFix: ' + autoFix);
+    if (filterCode) Logger.log('Filter by attendanceCode: ' + filterCode);
+    Logger.log('');
+    
+    const sheet = getSheet(sheetName.attendanceDetail);
+    if (!sheet) {
+      throw new Error('Sheet DiemDanhChiTiet không tồn tại');
+    }
+    
+    const data = sheet.getDataRange().getValues();
+    Logger.log('📊 Total rows: ' + data.length);
+    
+    // Map để theo dõi: attendanceCode -> { studentCode -> [rowIndices] }
+    const attendanceMap = new Map();
+    
+    // Map để theo dõi: studentCode + date -> [attendanceCode, rowIndex]
+    const studentDateMap = new Map();
+    
+    // Bỏ qua 2 dòng header (row 1: title, row 2: headers)
+    for (let i = 2; i < data.length; i++) {
+      const attendanceCode = String(data[i][0]).trim();
+      const studentCode = String(data[i][1]).trim();
+      const date = String(data[i][3]).trim();
+      const rowNumber = i + 1;
+      
+      // Skip empty rows
+      if (!attendanceCode || !studentCode) continue;
+      
+      // Filter by attendanceCode if specified
+      if (filterCode && attendanceCode !== filterCode) continue;
+      
+      // --- Check 1: Một attendanceCode có nhiều studentCode trùng nhau ---
+      if (!attendanceMap.has(attendanceCode)) {
+        attendanceMap.set(attendanceCode, new Map());
+      }
+      const studentMap = attendanceMap.get(attendanceCode);
+      
+      if (!studentMap.has(studentCode)) {
+        studentMap.set(studentCode, []);
+      }
+      studentMap.get(studentCode).push(rowNumber);
+      
+      // --- Check 2: Một studentCode + date có nhiều attendanceCode khác nhau ---
+      const studentDateKey = studentCode + '_' + date;
+      if (!studentDateMap.has(studentDateKey)) {
+        studentDateMap.set(studentDateKey, []);
+      }
+      studentDateMap.get(studentDateKey).push({
+        attendanceCode: attendanceCode,
+        rowNumber: rowNumber
+      });
+    }
+    
+    // Phân tích kết quả
+    const duplicatesType1 = []; // Một attendanceCode có nhiều studentCode trùng
+    const duplicatesType2 = []; // Một studentCode + date có nhiều attendanceCode
+    const rowsToDelete = []; // Rows to delete if autoFix
+    
+    // --- Analyze Type 1: Duplicate studentCode in same attendanceCode ---
+    Logger.log('');
+    Logger.log('📋 CHECK TYPE 1: Một mã điểm danh có học viên trùng lặp');
+    Logger.log('------------------------------------------------');
+    
+    attendanceMap.forEach((studentMap, attendanceCode) => {
+      studentMap.forEach((rowNumbers, studentCode) => {
+        if (rowNumbers.length > 1) {
+          const duplicate = {
+            type: 'DUPLICATE_STUDENT_IN_ATTENDANCE',
+            attendanceCode: attendanceCode,
+            studentCode: studentCode,
+            count: rowNumbers.length,
+            rowNumbers: rowNumbers
+          };
+          duplicatesType1.push(duplicate);
+          Logger.log('  ⚠️ AttendanceCode: ' + attendanceCode);
+          Logger.log('     StudentCode: ' + studentCode + ' xuất hiện ' + rowNumbers.length + ' lần');
+          Logger.log('     Rows: ' + rowNumbers.join(', '));
+          
+          // Mark duplicate rows for deletion (keep first, delete rest)
+          if (autoFix) {
+            for (let j = 1; j < rowNumbers.length; j++) {
+              rowsToDelete.push(rowNumbers[j]);
+            }
+          }
+        }
+      });
+    });
+    
+    if (duplicatesType1.length === 0) {
+      Logger.log('  ✅ Không có học viên trùng lặp trong cùng mã điểm danh');
+    }
+    
+    // --- Analyze Type 2: Same student + date with multiple attendanceCodes ---
+    Logger.log('');
+    Logger.log('📋 CHECK TYPE 2: Một học viên có nhiều mã điểm danh cùng ngày');
+    Logger.log('------------------------------------------------');
+    
+    studentDateMap.forEach((attendances, studentDateKey) => {
+      // Get unique attendanceCodes
+      const uniqueCodes = [...new Set(attendances.map(a => a.attendanceCode))];
+      
+      if (uniqueCodes.length > 1) {
+        const [studentCode, date] = studentDateKey.split('_');
+        const duplicate = {
+          type: 'MULTIPLE_ATTENDANCE_SAME_STUDENT_DATE',
+          studentCode: studentCode,
+          date: date,
+          attendanceCodes: uniqueCodes,
+          count: uniqueCodes.length,
+          rows: attendances
+        };
+        duplicatesType2.push(duplicate);
+        Logger.log('  ⚠️ StudentCode: ' + studentCode + ' (ngày ' + date + ')');
+        Logger.log('     Có ' + uniqueCodes.length + ' mã điểm danh khác nhau: ' + uniqueCodes.join(', '));
+      }
+    });
+    
+    if (duplicatesType2.length === 0) {
+      Logger.log('  ✅ Không có học viên điểm danh nhiều lần cùng ngày với mã khác nhau');
+    }
+    
+    // Auto Fix if enabled
+    let deletedCount = 0;
+    if (autoFix && rowsToDelete.length > 0) {
+      Logger.log('');
+      Logger.log('🔧 AUTO FIX: Xóa ' + rowsToDelete.length + ' bản ghi trùng lặp...');
+      
+      // Sort descending để xóa từ cuối lên
+      rowsToDelete.sort((a, b) => b - a);
+      
+      rowsToDelete.forEach(rowNumber => {
+        try {
+          sheet.deleteRow(rowNumber);
+          deletedCount++;
+          Logger.log('  ✅ Deleted row ' + rowNumber);
+        } catch (e) {
+          Logger.log('  ❌ Failed to delete row ' + rowNumber + ': ' + e.toString());
+        }
+      });
+      
+      Logger.log('✅ Đã xóa ' + deletedCount + '/' + rowsToDelete.length + ' bản ghi trùng lặp');
+    }
+    
+    // Summary
+    Logger.log('');
+    Logger.log('========================================');
+    Logger.log('📊 KẾT QUẢ KIỂM TRA');
+    Logger.log('========================================');
+    Logger.log('Type 1 - Học viên trùng trong cùng mã điểm danh: ' + duplicatesType1.length + ' trường hợp');
+    Logger.log('Type 2 - Học viên có nhiều mã điểm danh cùng ngày: ' + duplicatesType2.length + ' trường hợp');
+    if (autoFix) {
+      Logger.log('Đã xóa bản ghi trùng: ' + deletedCount);
+    }
+    Logger.log('========================================');
+    
+    return {
+      success: true,
+      summary: {
+        duplicateStudentInAttendance: duplicatesType1.length,
+        multipleAttendanceSameStudentDate: duplicatesType2.length,
+        totalDuplicates: duplicatesType1.length + duplicatesType2.length,
+        autoFixEnabled: autoFix,
+        rowsDeleted: deletedCount
+      },
+      duplicatesType1: duplicatesType1,
+      duplicatesType2: duplicatesType2,
+      message: duplicatesType1.length + duplicatesType2.length === 0 
+        ? 'Không có điểm danh trùng lặp' 
+        : 'Phát hiện ' + (duplicatesType1.length + duplicatesType2.length) + ' trường hợp trùng lặp'
+    };
+    
+  } catch (error) {
+    Logger.log('❌ Error in checkAttendanceDuplicates: ' + error.toString());
+    throw error;
+  }
+}
+
+/**
+ * FIX TYPE 1: Xóa học viên trùng lặp trong cùng một mã điểm danh
+ * Giữ lại bản ghi đầu tiên, xóa các bản ghi còn lại
+ * 
+ * @param {string} paramString - JSON string với options: { dryRun: boolean, attendanceCode?: string }
+ *   - dryRun: true = chỉ báo cáo, không xóa; false = xóa thật
+ *   - attendanceCode: chỉ fix cho mã điểm danh cụ thể (optional)
+ * @returns {Object} - Kết quả fix với số lượng đã xóa
+ */
+function fixAttendanceDuplicatesType1(paramString) {
+  try {
+    const param = paramString ? safeJSONParse(paramString) : {};
+    const dryRun = param.dryRun !== undefined ? param.dryRun : true; // Mặc định là dry run
+    const filterCode = param.attendanceCode || null;
+    
+    Logger.log('========================================');
+    Logger.log('🔧 FIX ĐIỂM DANH TRÙNG LẶP - TYPE 1');
+    Logger.log('========================================');
+    Logger.log('Mode: ' + (dryRun ? 'DRY RUN (chỉ báo cáo)' : '⚠️ THỰC TẾ (sẽ xóa dữ liệu)'));
+    if (filterCode) Logger.log('Filter by attendanceCode: ' + filterCode);
+    Logger.log('');
+    
+    const sheet = getSheet(sheetName.attendanceDetail);
+    if (!sheet) {
+      throw new Error('Sheet DiemDanhChiTiet không tồn tại');
+    }
+    
+    const data = sheet.getDataRange().getValues();
+    Logger.log('📊 Total rows in sheet: ' + data.length);
+    
+    // Map để theo dõi: attendanceCode -> { studentCode -> [rowNumbers] }
+    const attendanceMap = new Map();
+    
+    // Bỏ qua 2 dòng header
+    for (let i = 2; i < data.length; i++) {
+      const attendanceCode = String(data[i][0]).trim();
+      const studentCode = String(data[i][1]).trim();
+      const studentName = String(data[i][2]).trim();
+      const rowNumber = i + 1; // 1-based
+      
+      if (!attendanceCode || !studentCode) continue;
+      if (filterCode && attendanceCode !== filterCode) continue;
+      
+      if (!attendanceMap.has(attendanceCode)) {
+        attendanceMap.set(attendanceCode, new Map());
+      }
+      
+      const studentMap = attendanceMap.get(attendanceCode);
+      if (!studentMap.has(studentCode)) {
+        studentMap.set(studentCode, []);
+      }
+      studentMap.get(studentCode).push({
+        rowNumber: rowNumber,
+        name: studentName
+      });
+    }
+    
+    // Tìm các rows cần xóa
+    const rowsToDelete = [];
+    const duplicateDetails = [];
+    
+    attendanceMap.forEach((studentMap, attendanceCode) => {
+      studentMap.forEach((records, studentCode) => {
+        if (records.length > 1) {
+          // Có duplicate - giữ record đầu tiên, đánh dấu xóa các record còn lại
+          const keepRecord = records[0];
+          const deleteRecords = records.slice(1);
+          
+          duplicateDetails.push({
+            attendanceCode: attendanceCode,
+            studentCode: studentCode,
+            studentName: records[0].name,
+            totalCount: records.length,
+            keepRow: keepRecord.rowNumber,
+            deleteRows: deleteRecords.map(r => r.rowNumber)
+          });
+          
+          Logger.log('📋 AttendanceCode: ' + attendanceCode);
+          Logger.log('   StudentCode: ' + studentCode + ' (' + records[0].name + ')');
+          Logger.log('   Xuất hiện: ' + records.length + ' lần');
+          Logger.log('   ✅ Giữ row: ' + keepRecord.rowNumber);
+          Logger.log('   🗑️ Xóa rows: ' + deleteRecords.map(r => r.rowNumber).join(', '));
+          Logger.log('');
+          
+          deleteRecords.forEach(r => rowsToDelete.push(r.rowNumber));
+        }
+      });
+    });
+    
+    Logger.log('----------------------------------------');
+    Logger.log('📊 Tổng số trường hợp trùng lặp: ' + duplicateDetails.length);
+    Logger.log('📊 Tổng số rows cần xóa: ' + rowsToDelete.length);
+    Logger.log('');
+    
+    // Thực hiện xóa nếu không phải dry run
+    let deletedCount = 0;
+    if (!dryRun && rowsToDelete.length > 0) {
+      Logger.log('🔧 Bắt đầu xóa...');
+      
+      // Sort descending để xóa từ cuối lên
+      rowsToDelete.sort((a, b) => b - a);
+      
+      rowsToDelete.forEach(rowNumber => {
+        try {
+          sheet.deleteRow(rowNumber);
+          deletedCount++;
+          Logger.log('  ✅ Đã xóa row ' + rowNumber);
+        } catch (e) {
+          Logger.log('  ❌ Lỗi xóa row ' + rowNumber + ': ' + e.toString());
+        }
+      });
+      
+      Logger.log('');
+      Logger.log('========================================');
+      Logger.log('✅ HOÀN THÀNH!');
+      Logger.log('Đã xóa: ' + deletedCount + '/' + rowsToDelete.length + ' rows');
+      Logger.log('========================================');
+    } else if (dryRun && rowsToDelete.length > 0) {
+      Logger.log('⚠️ DRY RUN - Không xóa thực tế');
+      Logger.log('Để xóa thật, gọi: fixAttendanceDuplicatesType1(\'{"dryRun": false}\')');
+    } else {
+      Logger.log('✅ Không có bản ghi trùng lặp cần xóa');
+    }
+    
+    return {
+      success: true,
+      dryRun: dryRun,
+      duplicatesFound: duplicateDetails.length,
+      rowsToDelete: rowsToDelete.length,
+      rowsDeleted: deletedCount,
+      details: duplicateDetails,
+      message: dryRun 
+        ? 'Dry run hoàn tất. Tìm thấy ' + rowsToDelete.length + ' rows trùng lặp cần xóa.'
+        : 'Đã xóa ' + deletedCount + ' rows trùng lặp.'
+    };
+    
+  } catch (error) {
+    Logger.log('❌ Error in fixAttendanceDuplicatesType1: ' + error.toString());
+    throw error;
+  }
+}
+
+/**
+ * DRY RUN: Chỉ báo cáo các bản ghi trùng lặp, KHÔNG xóa
+ * Chạy hàm này trước để kiểm tra
+ */
+function fixAttendanceDuplicatesType1_DryRun() {
+  return fixAttendanceDuplicatesType1('{"dryRun": true}');
+}
+
+/**
+ * EXECUTE: Xóa thật các bản ghi trùng lặp
+ * ⚠️ CHÚ Ý: Hàm này sẽ XÓA DỮ LIỆU. Hãy chạy DryRun trước!
+ */
+function fixAttendanceDuplicatesType1_Execute() {
+  return fixAttendanceDuplicatesType1('{"dryRun": false}');
 }
