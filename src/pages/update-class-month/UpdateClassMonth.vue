@@ -17,7 +17,7 @@
             </VaInput> -->
           <VaSelect
             v-model="selectedLocation"
-            label="Cơ sở"
+            label="Cơ sở (Không bắt buộc)"
             placeholder="Chọn cơ sở"
             :options="uniqueLocations"
             value-by="value"
@@ -210,7 +210,7 @@ const studyingStudentIds = computed(() =>
 )
 
 const filteredItems = computed(() => {
-  return items.value.filter((item) => {
+  const filtered = items.value.filter((item) => {
     const isGroupSelected = selectedGroup.value !== ''
     const isTeacherSelected = selectedTeacher.value !== ''
     const isMonthSelected = selectedMonth.value !== ''
