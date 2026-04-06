@@ -273,16 +273,16 @@ Code dùng lẫn tiếng Việt, tiếng Anh, tên sheet business-specific và c
 
 ## 5. Đánh giá theo tiêu chí
 
-| Tiêu chí | Đánh giá | Nhận xét ngắn |
-| --- | --- | --- |
-| Phù hợp nghiệp vụ | 8/10 | Nghiệp vụ chính đã được số hóa khá sâu |
-| Tốc độ triển khai | 8/10 | Google Sheets + Apps Script giúp đi nhanh |
-| Bảo mật | 3/10 | Secret và session handling còn yếu |
-| Khả năng mở rộng | 4/10 | Mô hình hiện tại sẽ khó scale khi tăng user và flow |
-| Dễ bảo trì | 5/10 | Có tài liệu nhưng code phân tán, nhiều nợ kỹ thuật |
-| Chất lượng mã | 5/10 | Hoạt động được nhưng thiếu chuẩn hóa |
-| Kiểm thử | 2/10 | Gần như chưa có baseline test |
-| Sẵn sàng production | 4/10 | Phù hợp nội bộ, chưa vững cho mở rộng |
+| Tiêu chí            | Đánh giá | Nhận xét ngắn                                       |
+| ------------------- | -------- | --------------------------------------------------- |
+| Phù hợp nghiệp vụ   | 8/10     | Nghiệp vụ chính đã được số hóa khá sâu              |
+| Tốc độ triển khai   | 8/10     | Google Sheets + Apps Script giúp đi nhanh           |
+| Bảo mật             | 3/10     | Secret và session handling còn yếu                  |
+| Khả năng mở rộng    | 4/10     | Mô hình hiện tại sẽ khó scale khi tăng user và flow |
+| Dễ bảo trì          | 5/10     | Có tài liệu nhưng code phân tán, nhiều nợ kỹ thuật  |
+| Chất lượng mã       | 5/10     | Hoạt động được nhưng thiếu chuẩn hóa                |
+| Kiểm thử            | 2/10     | Gần như chưa có baseline test                       |
+| Sẵn sàng production | 4/10     | Phù hợp nội bộ, chưa vững cho mở rộng               |
 
 ## 6. Đề xuất cải tiến ưu tiên
 
@@ -295,7 +295,7 @@ Code dùng lẫn tiếng Việt, tiếng Anh, tên sheet business-specific và c
 5. Chốt một đường dữ liệu duy nhất:
    - hoặc chỉ Apps Script,
    - hoặc chuyển dần sang backend Node.
-   Tránh trạng thái “lai nhưng không rõ chuẩn”.
+     Tránh trạng thái “lai nhưng không rõ chuẩn”.
 
 ### Giai đoạn 2: 2-4 tuần, chuẩn hóa kỹ thuật
 

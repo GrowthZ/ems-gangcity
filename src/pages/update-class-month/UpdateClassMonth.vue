@@ -217,7 +217,6 @@ const filteredItems = computed(() => {
     const isGroupSelected = selectedGroup.value !== ''
     const isTeacherSelected = selectedTeacher.value !== ''
     const isMonthSelected = selectedMonth.value !== ''
-    const isLocationSelected = selectedLocation.value !== ''
 
     if (!studyingStudentIds.value.includes(item?.code)) {
       return false
@@ -360,9 +359,7 @@ const alreadyUpdateChecked = computed(() => {
     const [month, year] = row.dateUpdate.split('/')
     return (
       // Bỏ qua check location vì có học sinh chuyển lớp
-      selectedMonth.value == month &&
-      selectedYear.value == year &&
-      row.note == selectedGroup.value
+      selectedMonth.value == month && selectedYear.value == year && row.note == selectedGroup.value
     )
   })
 })
@@ -391,9 +388,7 @@ const sendUpdateLesson = async (dataJson) => {
     const [month, year] = row.dateUpdate.split('/')
     return (
       // Bỏ qua check location vì có học sinh chuyển lớp
-      selectedMonth.value == month &&
-      selectedYear.value == year &&
-      row.note == selectedGroup.value
+      selectedMonth.value == month && selectedYear.value == year && row.note == selectedGroup.value
     )
   })
   if (alreadyUpdated) {
@@ -419,9 +414,9 @@ const handleUpdateClick = async () => {
   const currentDate = new Date()
   const currentMonth = currentDate.getMonth() + 1
   const currentYear = currentDate.getFullYear()
-  
+
   const isCurrentMonth = Number(selectedMonth.value) === currentMonth && Number(selectedYear.value) === currentYear
-  
+
   const message = isCurrentMonth
     ? 'Tháng vẫn chưa kết thúc, bạn có chắc chắn là muốn cập nhật không? Thao tác này sẽ ghi nhận dữ liệu vào Data.'
     : 'Bạn có chắc chắn muốn cập nhật số buổi học cho tháng này không? Thao tác này sẽ ghi nhận dữ liệu vào Data.'
@@ -431,9 +426,9 @@ const handleUpdateClick = async () => {
     message: message,
     okText: 'Đồng ý',
     cancelText: 'Hủy bỏ',
-    color: 'warning'
+    color: 'warning',
   })
-  
+
   if (result) {
     await sendUpdateLesson(computedItems.value)
   }
@@ -448,7 +443,7 @@ watch([selectedGroup, selectedTeacher, selectedMonth, selectedYear], () => {
   // currentPage.value = 1
 })
 
-watch(selectedLocation, (newValue) => {
+watch(selectedLocation, () => {
   if (!selectedGroup.value) {
     return
   }
