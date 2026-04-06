@@ -43,7 +43,7 @@
             class="mt-4"
             :disabled="alreadyUpdateChecked"
             :loading="loading"
-            @click="sendUpdateLesson(computedItems)"
+            @click="handleUpdateClick"
           >
             <VaIcon :name="`mso-${alreadyUpdateChecked ? 'check_circle' : 'cloud_upload'}`" class="mr-2" />
             {{ alreadyUpdateChecked ? 'Đã cập nhật' : 'Cập nhật' }}
@@ -96,6 +96,7 @@
 </template>
 <script setup>
 import { ref, computed, watch } from 'vue'
+import { useModal } from 'vuestic-ui'
 import { useData } from '../../stores/use-data'
 import { DataSheet, sendRequest, Action, showMessageBox, fetchDataSheet } from '../../stores/data-from-sheet'
 import { sleep } from '../../services/utils'
@@ -112,6 +113,8 @@ const selectedLocation = ref('')
 const selectedYear = ref(year)
 const selectedMonth = ref(month)
 const currentPage = ref(1) // Trang hiện tại
+
+const { confirm } = useModal()
 
 const data = useData()
 
@@ -410,6 +413,20 @@ const sendUpdateLesson = async (dataJson) => {
   }
   dataStudentUpdateMonth.value = await fetchDataSheet(DataSheet.studentUpdateMonth)
   data.loading = false
+}
+
+const handleUpdateClick = async () => {
+  const result = await confirm({
+    title: 'Xác nhận cập nhật',
+    message: 'Bạn có chắc chắn muốn cập nhật số buổi học cho tháng này không? Thao tác này sẽ ghi nhận dữ liệu vào Data.',
+    okText: 'Đồng ý',
+    cancelText: 'Hủy bỏ',
+    color: 'warning'
+  })
+  
+  if (result) {
+    await sendUpdateLesson(computedItems.value)
+  }
 }
 
 watch([selectedGroup, selectedTeacher, selectedMonth, selectedYear], () => {
