@@ -416,9 +416,19 @@ const sendUpdateLesson = async (dataJson) => {
 }
 
 const handleUpdateClick = async () => {
+  const currentDate = new Date()
+  const currentMonth = currentDate.getMonth() + 1
+  const currentYear = currentDate.getFullYear()
+  
+  const isCurrentMonth = Number(selectedMonth.value) === currentMonth && Number(selectedYear.value) === currentYear
+  
+  const message = isCurrentMonth
+    ? 'Tháng vẫn chưa kết thúc, bạn có chắc chắn là muốn cập nhật không? Thao tác này sẽ ghi nhận dữ liệu vào Data.'
+    : 'Bạn có chắc chắn muốn cập nhật số buổi học cho tháng này không? Thao tác này sẽ ghi nhận dữ liệu vào Data.'
+
   const result = await confirm({
     title: 'Xác nhận cập nhật',
-    message: 'Bạn có chắc chắn muốn cập nhật số buổi học cho tháng này không? Thao tác này sẽ ghi nhận dữ liệu vào Data.',
+    message: message,
     okText: 'Đồng ý',
     cancelText: 'Hủy bỏ',
     color: 'warning'
