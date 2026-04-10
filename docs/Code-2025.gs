@@ -314,59 +314,116 @@ function markAttendance(paramString) {
     Logger.log('Students missing: ' + studentMissings.length);
     
     // 1. Ghi danh sách học viên có mặt vào sheet DiemDanhChiTiet
-    // ✅ BATCH WRITE: Thay vì appendRow từng row, dùng setValues() batch
+    // ✅ BATCH WRITE với DUPLICATE CHECK: Kiểm tra trước khi ghi
     if (studentMarks.length > 0) {
       const detailSheet = getSheet(sheetName.attendanceDetail);
       if (!detailSheet) {
         throw new Error('Sheet DiemDanhChiTiet không tồn tại');
       }
       
+      // ✅ CHECK DUPLICATE: Đọc dữ liệu hiện tại để kiểm tra
+      const existingDetailData = detailSheet.getDataRange().getValues();
+      const existingDetailKeys = new Set();
+      for (let i = 2; i < existingDetailData.length; i++) {
+        // Key = attendanceCode + studentCode
+        const key = String(existingDetailData[i][0]).trim() + '|' + String(existingDetailData[i][1]).trim();
+        existingDetailKeys.add(key);
+      }
+      
       const timestamp = new Date().toISOString();
-      const allRows = studentMarks.map(mark => [
-        mark[0], // attendanceCode
-        mark[1], // studentCode
-        mark[2], // studentName
-        formatDate(mark[3]), // date - FORMAT về dd/mm/yyyy
-        mark[4], // group
-        mark[5] || '', // note
-        timestamp // timestamp
-      ]);
+      const allRows = [];
+      let skippedCount = 0;
       
-      const startRow = detailSheet.getLastRow() + 1;
-      detailSheet.getRange(startRow, 1, allRows.length, allRows[0].length).setValues(allRows);
+      studentMarks.forEach(mark => {
+        const dupKey = String(mark[0]).trim() + '|' + String(mark[1]).trim();
+        
+        // ✅ Skip nếu attendanceCode + studentCode đã tồn tại
+        if (existingDetailKeys.has(dupKey)) {
+          Logger.log('⚠️ SKIP duplicate DiemDanhChiTiet: ' + dupKey);
+          skippedCount++;
+          return;
+        }
+        
+        allRows.push([
+          mark[0], // attendanceCode
+          mark[1], // studentCode
+          mark[2], // studentName
+          formatDate(mark[3]), // date - FORMAT về dd/mm/yyyy
+          mark[4], // group
+          mark[5] || '', // note
+          timestamp // timestamp
+        ]);
+        
+        // Thêm vào set để phòng duplicate trong cùng batch
+        existingDetailKeys.add(dupKey);
+      });
       
-      // ✅ ÉP FORMAT TEXT cho cột date (D) để tránh Google Sheets parse nhầm
-      detailSheet.getRange(startRow, 4, allRows.length, 1).setNumberFormat('@');
+      if (allRows.length > 0) {
+        const startRow = detailSheet.getLastRow() + 1;
+        detailSheet.getRange(startRow, 1, allRows.length, allRows[0].length).setValues(allRows);
+        
+        // ✅ ÉP FORMAT TEXT cho cột date (D) để tránh Google Sheets parse nhầm
+        detailSheet.getRange(startRow, 4, allRows.length, 1).setNumberFormat('@');
+      }
       
-      Logger.log('✅ Đã ghi batch ' + studentMarks.length + ' học viên có mặt');
+      Logger.log('✅ Đã ghi batch ' + allRows.length + ' học viên có mặt' + (skippedCount > 0 ? ' (bỏ qua ' + skippedCount + ' duplicate)' : ''));
     }
     
     // 2. Ghi danh sách học viên vắng mặt vào sheet DiemDanhNghi
-    // ✅ BATCH WRITE: Thay vì appendRow từng row, dùng setValues() batch
+    // ✅ BATCH WRITE với DUPLICATE CHECK
     if (studentMissings.length > 0) {
       const missingSheet = getSheet(sheetName.attendanceMissing);
       if (!missingSheet) {
         throw new Error('Sheet DiemDanhNghi không tồn tại');
       }
       
+      // ✅ CHECK DUPLICATE: Đọc dữ liệu hiện tại
+      const existingMissingData = missingSheet.getDataRange().getValues();
+      const existingMissingKeys = new Set();
+      for (let i = 2; i < existingMissingData.length; i++) {
+        // DiemDanhNghi: cột 0=timestamp, 1=date, 2=studentCode
+        // Dùng attendanceCode khó xác định trong DiemDanhNghi, dùng date+studentCode
+        const key = String(existingMissingData[i][1]).trim() + '|' + String(existingMissingData[i][2]).trim() + '|' + String(existingMissingData[i][4]).trim();
+        existingMissingKeys.add(key);
+      }
+      
       const timestamp = new Date().toISOString();
-      const allMissingRows = studentMissings.map(missing => [
-        timestamp, // timestamp
-        formatDate(missing[3] || calendar?.dateTime), // date - FORMAT về dd/mm/yyyy
-        missing[1], // studentCode
-        missing[2], // studentName
-        missing[4] || calendar?.group, // group
-        missing[5] || '', // reason
-        missing[6] || 'Chưa chăm sóc' // note
-      ]);
+      const allMissingRows = [];
+      let skippedMissingCount = 0;
       
-      const startRow = missingSheet.getLastRow() + 1;
-      missingSheet.getRange(startRow, 1, allMissingRows.length, allMissingRows[0].length).setValues(allMissingRows);
+      studentMissings.forEach(missing => {
+        const dateStr = formatDate(missing[3] || calendar?.dateTime);
+        const dupKey = String(dateStr).trim() + '|' + String(missing[1]).trim() + '|' + String(missing[4] || calendar?.group).trim();
+        
+        // ✅ Skip nếu đã tồn tại
+        if (existingMissingKeys.has(dupKey)) {
+          Logger.log('⚠️ SKIP duplicate DiemDanhNghi: ' + dupKey);
+          skippedMissingCount++;
+          return;
+        }
+        
+        allMissingRows.push([
+          timestamp, // timestamp
+          dateStr, // date - FORMAT về dd/mm/yyyy
+          missing[1], // studentCode
+          missing[2], // studentName
+          missing[4] || calendar?.group, // group
+          missing[5] || '', // reason
+          missing[6] || 'Chưa chăm sóc' // note
+        ]);
+        
+        existingMissingKeys.add(dupKey);
+      });
       
-      // ✅ ÉP FORMAT TEXT cho cột date (B) để tránh Google Sheets parse nhầm
-      missingSheet.getRange(startRow, 2, allMissingRows.length, 1).setNumberFormat('@');
+      if (allMissingRows.length > 0) {
+        const startRow = missingSheet.getLastRow() + 1;
+        missingSheet.getRange(startRow, 1, allMissingRows.length, allMissingRows[0].length).setValues(allMissingRows);
+        
+        // ✅ ÉP FORMAT TEXT cho cột date (B) để tránh Google Sheets parse nhầm
+        missingSheet.getRange(startRow, 2, allMissingRows.length, 1).setNumberFormat('@');
+      }
       
-      Logger.log('✅ Đã ghi batch ' + studentMissings.length + ' học viên vắng mặt');
+      Logger.log('✅ Đã ghi batch ' + allMissingRows.length + ' học viên vắng mặt' + (skippedMissingCount > 0 ? ' (bỏ qua ' + skippedMissingCount + ' duplicate)' : ''));
     }
     
     // 3. Cập nhật attendanceCode vào sheet LichDay
@@ -552,6 +609,7 @@ function debugSheetStructure() {
 /**
  * Cập nhật điểm danh - Xóa dữ liệu cũ và tạo mới
  * ✅ LOCK SERVICE: Tránh race condition khi nhiều người cập nhật cùng lúc
+ * ✅ FIX: Thêm flush + verify để đảm bảo xoá xong trước khi ghi mới
  */
 function updateAttendance(paramString) {
   const lock = LockService.getScriptLock();
@@ -570,18 +628,43 @@ function updateAttendance(paramString) {
     deleteOldAttendance(code, sheetName.attendanceDetail);
     deleteOldAttendance(code, sheetName.attendanceMissing);
     
-    // Tạo lại điểm danh mới (markAttendance sẽ lấy lock riêng, 
-    // nhưng vì đang giữ lock này nên không conflict)
-    // ✅ Gọi trực tiếp internal logic thay vì markAttendance để tránh double lock
-    const attendanceParam = safeJSONParse(paramString);
+    // ✅ FIX: Force flush pending changes trước khi ghi mới
+    SpreadsheetApp.flush();
     
-    // Thực hiện ghi dữ liệu mới (copy logic từ markAttendance nhưng không lock)
+    // ✅ VERIFY: Kiểm tra đã xoá hết DiemDanhChiTiet chưa
+    const verifyDetailSheet = getSheet(sheetName.attendanceDetail);
+    if (verifyDetailSheet) {
+      const verifyData = verifyDetailSheet.getDataRange().getValues();
+      const normalizedCode = String(code).trim();
+      const remaining = verifyData.filter((row, i) => i >= 2 && String(row[0]).trim() === normalizedCode);
+      if (remaining.length > 0) {
+        Logger.log('⚠️ WARNING: Still ' + remaining.length + ' rows remaining in DiemDanhChiTiet after delete, retrying...');
+        deleteOldAttendance(code, sheetName.attendanceDetail);
+        SpreadsheetApp.flush();
+      }
+    }
+    
+    // ✅ VERIFY: Kiểm tra đã xoá hết DiemDanhNghi chưa
+    const verifyMissingSheet = getSheet(sheetName.attendanceMissing);
+    if (verifyMissingSheet) {
+      const verifyMissingData = verifyMissingSheet.getDataRange().getValues();
+      const normalizedCode2 = String(code).trim();
+      const remainingMissing = verifyMissingData.filter((row, i) => i >= 2 && String(row[0]).trim() === normalizedCode2);
+      if (remainingMissing.length > 0) {
+        Logger.log('⚠️ WARNING: Still ' + remainingMissing.length + ' rows remaining in DiemDanhNghi after delete, retrying...');
+        deleteOldAttendance(code, sheetName.attendanceMissing);
+        SpreadsheetApp.flush();
+      }
+    }
+    
+    // Tạo lại điểm danh mới (copy logic từ markAttendance nhưng không lock)
+    const attendanceParam = safeJSONParse(paramString);
     const attendanceCode = attendanceParam.code || attendanceParam.calendar?.attendanceCode;
     const calendar = attendanceParam.calendar;
     const studentMarks = attendanceParam.studentMarks || [];
     const studentMissings = attendanceParam.studentMissings || [];
     
-    // Ghi studentMarks batch
+    // Ghi studentMarks batch (đã xoá hết data cũ, không cần check duplicate)
     if (studentMarks.length > 0) {
       const detailSheet = getSheet(sheetName.attendanceDetail);
       const timestamp = new Date().toISOString();
@@ -657,6 +740,8 @@ function deleteOldAttendance(code, nameSheet) {
     Logger.log('🗑️ Deleted ' + rowsToDelete.length + ' rows from ' + nameSheet);
   } catch (error) {
     Logger.log('❌ Delete old attendance error: ' + error.toString());
+    // ✅ FIX: Throw error lên caller để ngăn ghi mới khi chưa xoá xong
+    throw error;
   }
 }
 

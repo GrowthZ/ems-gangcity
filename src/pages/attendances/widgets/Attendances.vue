@@ -182,6 +182,7 @@ const showMessageBox = (message: string, color: string) => {
   })
 }
 const sendData = async (data: any) => {
+  if (sending.value) return // ✅ Guard chống double-click
   console.log(data)
   sending.value = true
   const res = await sendRequest(Action.markAttendance, data)
@@ -195,6 +196,7 @@ const sendData = async (data: any) => {
 }
 
 const updateData = async (data: any) => {
+  if (sending.value) return // ✅ Guard chống double-click
   sending.value = true
   const res = await sendRequest(Action.updateAttendance, data)
   if (res.status == 'success') {

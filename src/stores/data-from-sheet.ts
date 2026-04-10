@@ -139,15 +139,24 @@ interface SendRequestResult {
  *
  * ✅ Ưu điểm:
  * - Tránh duplicate rows với idempotency key
- * - Retry logic thông minh
+ * - Retry logic thông minh - giữ nguyên key khi retry
  * - Timeout hợp lý
  *
  * Chỉ sử dụng Apps Script cho WRITE operations
  * READ operations sử dụng API v4 (fetchDataSheet)
  */
 export const sendRequest = async (action: string, param: any): Promise<SendRequestResult> => {
+  // ✅ FIX: Generate idempotency key MỘT LẦN, giữ nguyên khi retry
+  const idempotencyKey = generateIdempotencyKey(action, param)
+  return _doSendRequest(action, param, idempotencyKey)
+}
+
+const _doSendRequest = async (
+  action: string,
+  param: any,
+  idempotencyKey: string,
+): Promise<SendRequestResult> => {
   try {
-    const idempotencyKey = generateIdempotencyKey(action, param)
     const paramString = typeof param === 'string' ? param : JSON.stringify(param)
 
     console.log(`🚀 Gửi request với action: ${action}, key: ${idempotencyKey}`)
@@ -172,8 +181,8 @@ export const sendRequest = async (action: string, param: any): Promise<SendReque
     if (error?.response?.status === 429 || error?.code === 'ECONNABORTED') {
       console.log('⏳ Đang thử lại sau 2 giây...')
       await delay(2000)
-      // Retry with same idempotency key
-      return sendRequest(action, param)
+      // ✅ FIX: Retry với CÙNG idempotency key để server nhận ra request đã xử lý
+      return _doSendRequest(action, param, idempotencyKey)
     }
 
     return {
@@ -182,6 +191,7 @@ export const sendRequest = async (action: string, param: any): Promise<SendReque
     }
   }
 }
+
 
 export const showMessageBox = (message: string, color: string) => {
   notify({

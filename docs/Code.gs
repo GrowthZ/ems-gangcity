@@ -340,7 +340,28 @@ function markAttendance(paramString) {
         throw new Error('Sheet DiemDanhChiTiet không tồn tại');
       }
       
+      // ✅ CHECK DUPLICATE: Đọc dữ liệu hiện tại để kiểm tra trước khi ghi
+      const existingDetailData = detailSheet.getDataRange().getValues();
+      const existingDetailKeys = new Set();
+      for (let i = 2; i < existingDetailData.length; i++) {
+        // Key = attendanceCode + studentCode
+        const key = String(existingDetailData[i][0]).trim() + '|' + String(existingDetailData[i][1]).trim();
+        existingDetailKeys.add(key);
+      }
+      
+      let insertedCount = 0;
+      let skippedCount = 0;
+      
       studentMarks.forEach(mark => {
+        const dupKey = String(mark[0]).trim() + '|' + String(mark[1]).trim();
+        
+        // ✅ Skip nếu attendanceCode + studentCode đã tồn tại
+        if (existingDetailKeys.has(dupKey)) {
+          Logger.log('⚠️ SKIP duplicate DiemDanhChiTiet: ' + dupKey);
+          skippedCount++;
+          return;
+        }
+        
         const rowData = [
           mark[0], // attendanceCode
           mark[1], // studentCode
@@ -355,9 +376,13 @@ function markAttendance(paramString) {
         
         // ✅ ÉP FORMAT TEXT cho cột date (D) để tránh Google Sheets parse nhầm
         detailSheet.getRange(`D${newRow}`).setNumberFormat('@');
+        
+        // Thêm vào set để phòng duplicate trong cùng batch
+        existingDetailKeys.add(dupKey);
+        insertedCount++;
       });
       
-      Logger.log('✅ Đã ghi ' + studentMarks.length + ' học viên có mặt');
+      Logger.log('✅ Đã ghi ' + insertedCount + ' học viên có mặt' + (skippedCount > 0 ? ' (bỏ qua ' + skippedCount + ' duplicate)' : ''));
     }
     
     // 2. Ghi danh sách học viên vắng mặt vào sheet DiemDanhNghi
@@ -367,7 +392,29 @@ function markAttendance(paramString) {
         throw new Error('Sheet DiemDanhNghi không tồn tại');
       }
       
+      // ✅ CHECK DUPLICATE: Đọc dữ liệu hiện tại để kiểm tra trước khi ghi
+      // DiemDanhNghi: cột 0=timestamp, 1=date, 2=studentCode → dùng attendanceCode(từ param) + studentCode
+      const existingMissingData = missingSheet.getDataRange().getValues();
+      const existingMissingKeys = new Set();
+      for (let i = 2; i < existingMissingData.length; i++) {
+        // Key = attendanceCode(cột 0) + studentCode(cột 2)
+        const key = String(existingMissingData[i][0]).trim() + '|' + String(existingMissingData[i][2]).trim();
+        existingMissingKeys.add(key);
+      }
+      
+      let insertedMissingCount = 0;
+      let skippedMissingCount = 0;
+      
       studentMissings.forEach(missing => {
+        const dupKey = String(missing[0] || attendanceCode).trim() + '|' + String(missing[1]).trim();
+        
+        // ✅ Skip nếu đã tồn tại
+        if (existingMissingKeys.has(dupKey)) {
+          Logger.log('⚠️ SKIP duplicate DiemDanhNghi: ' + dupKey);
+          skippedMissingCount++;
+          return;
+        }
+        
         const rowData = [
           new Date().toISOString(), // timestamp
           formatDate(missing[3] || calendar?.dateTime), // date - ✅ FORMAT về dd/mm/yyyy
@@ -382,9 +429,12 @@ function markAttendance(paramString) {
         
         // ✅ ÉP FORMAT TEXT cho cột date (B) để tránh Google Sheets parse nhầm
         missingSheet.getRange(`B${newRow}`).setNumberFormat('@');
+        
+        existingMissingKeys.add(dupKey);
+        insertedMissingCount++;
       });
       
-      Logger.log('✅ Đã ghi ' + studentMissings.length + ' học viên vắng mặt');
+      Logger.log('✅ Đã ghi ' + insertedMissingCount + ' học viên vắng mặt' + (skippedMissingCount > 0 ? ' (bỏ qua ' + skippedMissingCount + ' duplicate)' : ''));
     }
     
     // 3. Cập nhật attendanceCode vào sheet LichDay
@@ -566,6 +616,7 @@ function debugSheetStructure() {
 
 /**
  * Cập nhật điểm danh - Xóa dữ liệu cũ và tạo mới
+ * ✅ FIX: Thêm flush + verify để tránh race condition gây duplicate
  */
 function updateAttendance(paramString) {
   try {
@@ -577,6 +628,35 @@ function updateAttendance(paramString) {
     // Xóa dữ liệu cũ
     deleteOldAttendance(code, sheetName.attendanceDetail);
     deleteOldAttendance(code, sheetName.attendanceMissing);
+    
+    // ✅ FIX: Force flush pending changes trước khi ghi mới
+    SpreadsheetApp.flush();
+    
+    // ✅ VERIFY: Kiểm tra đã xoá hết DiemDanhChiTiet chưa
+    const verifyDetailSheet = getSheet(sheetName.attendanceDetail);
+    if (verifyDetailSheet) {
+      const verifyData = verifyDetailSheet.getDataRange().getValues();
+      const normalizedCode = String(code).trim();
+      const remaining = verifyData.filter((row, i) => i >= 2 && String(row[0]).trim() === normalizedCode);
+      if (remaining.length > 0) {
+        Logger.log('⚠️ WARNING: Still ' + remaining.length + ' rows remaining in DiemDanhChiTiet after delete, retrying...');
+        deleteOldAttendance(code, sheetName.attendanceDetail);
+        SpreadsheetApp.flush();
+      }
+    }
+    
+    // ✅ VERIFY: Kiểm tra đã xoá hết DiemDanhNghi chưa
+    const verifyMissingSheet = getSheet(sheetName.attendanceMissing);
+    if (verifyMissingSheet) {
+      const verifyMissingData = verifyMissingSheet.getDataRange().getValues();
+      const normalizedCode2 = String(code).trim();
+      const remainingMissing = verifyMissingData.filter((row, i) => i >= 2 && String(row[0]).trim() === normalizedCode2);
+      if (remainingMissing.length > 0) {
+        Logger.log('⚠️ WARNING: Still ' + remainingMissing.length + ' rows remaining in DiemDanhNghi after delete, retrying...');
+        deleteOldAttendance(code, sheetName.attendanceMissing);
+        SpreadsheetApp.flush();
+      }
+    }
     
     // Tạo lại điểm danh mới
     markAttendance(paramString);
@@ -622,6 +702,8 @@ function deleteOldAttendance(code, nameSheet) {
     Logger.log('🗑️ Deleted ' + rowsToDelete.length + ' rows from ' + nameSheet + ' for code: ' + normalizedCode);
   } catch (error) {
     Logger.log('❌ Delete old attendance error: ' + error.toString());
+    // ✅ FIX: Throw error lên caller để ngăn ghi mới khi chưa xoá xong
+    throw error;
   }
 }
 
