@@ -401,7 +401,7 @@ const sendPayment = async (dataJson) => {
       showMessageBox(res.data?.message || `Đóng học thất bại!`, 'danger')
       return false // ❌ Trả về fail
     }
-  } catch (error: any) {
+  } catch (error) {
     console.error('❌ Error in sendPayment:', error)
     showMessageBox(`Đóng học thất bại: ${error?.message || error}`, 'danger')
     return false
@@ -426,7 +426,7 @@ const sendUpdateLesson = async (dataJson) => {
       showMessageBox(res.data?.message || `Điều chỉnh thất bại!`, 'danger')
       return false // ❌ Trả về fail
     }
-  } catch (error: any) {
+  } catch (error) {
     console.error('❌ Error in sendUpdateLesson:', error)
     showMessageBox(`Điều chỉnh thất bại: ${error?.message || error}`, 'danger')
     return false

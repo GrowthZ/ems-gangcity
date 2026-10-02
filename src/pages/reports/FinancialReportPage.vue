@@ -1013,10 +1013,7 @@ const confirmDelete = async () => {
     // FALLBACK: Use studentCode + datePayment (legacy support)
     const deletePayload = selectedPayment.value.id
       ? { id: selectedPayment.value.id }
-      : {
-          studentCode: selectedPayment.value.studentCode,
-          datePayment: selectedPayment.value.datePayment,
-        }
+      : { studentCode: selectedPayment.value.studentCode, datePayment: selectedPayment.value.datePayment }
 
     console.log('📝 Delete payload:', deletePayload)
 
