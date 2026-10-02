@@ -22,6 +22,7 @@ var actionHandlers = {
   'createPayment': createPayment,
   'updatePayment': updatePayment,
   'deletePayment': deletePayment,
+  'cleanDuplicatePayments': cleanDuplicatePayments,
   'updateLesson': updateLesson,
   'newStudent': newStudent,
   'updateStudent': updateStudent,
@@ -51,10 +52,31 @@ function doGet(e) {
 }
 
 function handleRequest(e) {
+  let lock = LockService.getScriptLock();
+  let hasLock = false;
+
   try {
     let action = e.parameter.action;
     let param = e.parameter.param;
     let idempotencyKey = e.parameter.key || ''; // Idempotency key để tránh duplicate
+
+    // Với các action GHI dữ liệu: acquire lock để đảm bảo thread-safety chống ghi trùng
+    const writeActions = [
+      'createPayment', 'updatePayment', 'deletePayment', 'cleanDuplicatePayments',
+      'updateLesson', 'newStudent', 'updateStudent', 'updateStudentByMonth',
+      'markAttendance', 'updateAttendance', 'createCalendars'
+    ];
+
+    if (writeActions.indexOf(action) !== -1) {
+      hasLock = lock.tryLock(30000); // Chờ lock tối đa 30 giây
+      if (!hasLock) {
+        Logger.log('⚠️ Không thể lấy script lock cho action: ' + action);
+        return createResponse({
+          status: 'error',
+          message: 'Hệ thống đang bận xử lý giao dịch khác, vui lòng thử lại sau giây lát.'
+        });
+      }
+    }
 
     // Check cache trước - nếu đã xử lý rồi thì trả kết quả cũ
     if (idempotencyKey) {
@@ -101,6 +123,10 @@ function handleRequest(e) {
       message: 'Internal error',
       data: { error: error.toString() }
     });
+  } finally {
+    if (hasLock) {
+      lock.releaseLock();
+    }
   }
 }
 
@@ -1043,6 +1069,45 @@ function createPayment(paramString) {
   try {
     const param = safeJSONParse(paramString);
     const sheet = getSheet(sheetName.payment);
+    const dataRange = sheet.getDataRange();
+    const data = dataRange.getValues();
+
+    const headerRow = 2; // Index 2 = row 3
+    const headers = data[headerRow];
+    const idCol = headers.indexOf('id');
+    const studentCodeCol = headers.indexOf('studentCode');
+    const datePaymentCol = headers.indexOf('datePayment');
+    const moneyCol = headers.indexOf('money');
+    const lessonCol = headers.indexOf('lesson');
+
+    const formattedDate = formatDate(param.datePayment) || '';
+    const cleanMoney = String(param.money || '').replace(/,/g, '').replace(/\./g, '');
+    const cleanLesson = String(param.lesson || '').trim();
+    const cleanStudentCode = String(param.studentCode || '').trim();
+
+    // 🔍 KIỂM TRA CHỐNG TRÙNG LẶP: Quét các dòng gần đây từ dưới lên
+    // Nếu cùng studentCode, datePayment, money và lesson đã được ghi, không ghi đè thêm dòng mới
+    for (let i = data.length - 1; i > headerRow; i--) {
+      const row = data[i];
+      const rowCode = String(row[studentCodeCol] || '').trim();
+      const rowDate = String(row[datePaymentCol] || '').trim();
+      const rowMoney = String(row[moneyCol] || '').replace(/,/g, '').replace(/\./g, '');
+      const rowLesson = String(row[lessonCol] || '').trim();
+
+      if (rowCode === cleanStudentCode &&
+          rowDate === formattedDate &&
+          rowMoney === cleanMoney &&
+          rowLesson === cleanLesson) {
+        const existingId = idCol !== -1 ? String(row[idCol] || '').trim() : '';
+        Logger.log('⚠️ Phát hiện giao dịch trùng lặp cho ' + cleanStudentCode + ' ngày ' + formattedDate + ' (ID: ' + existingId + ') -> Bỏ qua không thêm dòng mới');
+        return {
+          ...param,
+          id: existingId,
+          isDuplicate: true,
+          message: 'Giao dịch đã tồn tại trên hệ thống'
+        };
+      }
+    }
 
     // Generate unique ID
     const paymentId = generatePaymentId();
@@ -1052,7 +1117,7 @@ function createPayment(paramString) {
     const rowData = [
       param.studentCode || '',
       param.studentName || '',
-      formatDate(param.datePayment) || '', // ✅ FORMAT về dd/mm/yyyy
+      formattedDate, // ✅ FORMAT về dd/mm/yyyy
       param.type || '',
       param.money || '',
       param.lesson || '',
@@ -1339,6 +1404,86 @@ function deletePayment(paramString) {
     return {
       status: 'error',
       message: 'Lỗi: ' + error.toString()
+    };
+  }
+}
+
+/**
+ * Dọn dẹp tất cả các dòng thanh toán trùng lặp trong sheet DongHoc
+ * Giữ lại dòng đầu tiên, xóa các dòng trùng lặp phía sau (xóa từ dưới lên trên)
+ */
+function cleanDuplicatePayments() {
+  try {
+    const sheet = getSheet(sheetName.payment);
+    if (!sheet) {
+      return { status: 'error', message: 'Không tìm thấy sheet DongHoc' };
+    }
+
+    const data = sheet.getDataRange().getValues();
+    const headerRow = 2; // Index 2 = Row 3
+    const headers = data[headerRow];
+
+    const idCol = headers.indexOf('id');
+    const studentCodeCol = headers.indexOf('studentCode');
+    const studentNameCol = headers.indexOf('studentName');
+    const datePaymentCol = headers.indexOf('datePayment');
+    const moneyCol = headers.indexOf('money');
+    const lessonCol = headers.indexOf('lesson');
+
+    const seenMap = {};
+    const duplicates = [];
+
+    // Duyệt từ trên xuống dưới để ghi nhận dòng đầu tiên và tìm các dòng trùng
+    for (let i = headerRow + 1; i < data.length; i++) {
+      const row = data[i];
+      const id = idCol !== -1 ? String(row[idCol] || '').trim() : '';
+      const code = String(row[studentCodeCol] || '').trim();
+      const name = studentNameCol !== -1 ? String(row[studentNameCol] || '').trim() : '';
+      const date = String(row[datePaymentCol] || '').trim();
+      const money = String(row[moneyCol] || '').replace(/,/g, '').replace(/\./g, '');
+      const lesson = String(row[lessonCol] || '').trim();
+
+      if (!code && !id) continue;
+
+      // Khóa định danh: ưu tiên ID (nếu có id), hoặc bộ 4 thuộc tính (code + date + money + lesson)
+      const key = id ? ('id_' + id) : ('biz_' + code + '_' + date + '_' + money + '_' + lesson);
+
+      if (seenMap[key]) {
+        duplicates.push({
+          rowNumber: i + 1, // 1-based index trên sheet
+          id: id,
+          studentCode: code,
+          studentName: name,
+          date: date,
+          money: row[moneyCol],
+          lesson: lesson,
+          originalRow: seenMap[key]
+        });
+      } else {
+        seenMap[key] = i + 1;
+      }
+    }
+
+    Logger.log('🔍 Tìm thấy ' + duplicates.length + ' dòng trùng lặp trong sheet DongHoc');
+
+    // Xóa từ dòng lớn nhất về dòng nhỏ nhất để bảo toàn chỉ số dòng
+    for (let j = duplicates.length - 1; j >= 0; j--) {
+      const targetRow = duplicates[j].rowNumber;
+      Logger.log('🗑️ Xóa dòng ' + targetRow + ' (' + duplicates[j].id + ' - ' + duplicates[j].studentCode + ')');
+      sheet.deleteRow(targetRow);
+    }
+
+    Logger.log('✅ Đã dọn dẹp thành công ' + duplicates.length + ' dòng trùng lặp.');
+    return {
+      status: 'success',
+      deletedCount: duplicates.length,
+      deletedRows: duplicates
+    };
+  } catch (error) {
+    Logger.log('❌ Lỗi khi dọn dẹp trùng lặp: ' + error.toString());
+    return {
+      status: 'error',
+      message: error.toString()
     };
   }
 }

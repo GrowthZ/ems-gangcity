@@ -169,6 +169,30 @@
         </VaButton>
       </div> -->
 
+      <!-- Duplicate Warning & Cleanup Banner -->
+      <VaAlert v-if="duplicatePaymentsCount > 0" color="danger" outline class="mb-4">
+        <template #icon>
+          <VaIcon name="warning" color="danger" />
+        </template>
+        <div class="flex items-center justify-between flex-wrap gap-2 w-full">
+          <div>
+            <strong class="font-bold text-danger">Cảnh báo trùng lặp:</strong>
+            Phát hiện <strong>{{ duplicatePaymentsCount }}</strong> bản ghi đóng học bị trùng lặp trên bảng DongHoc (làm sai lệch doanh thu và số buổi học).
+          </div>
+          <div class="flex gap-2">
+            <VaButton
+              color="danger"
+              size="small"
+              icon="delete_sweep"
+              :loading="cleaningDuplicates"
+              @click="handleCleanDuplicates"
+            >
+              Dọn dẹp bản ghi trùng ({{ duplicatePaymentsCount }})
+            </VaButton>
+          </div>
+        </div>
+      </VaAlert>
+
       <!-- Data Table -->
       <VaCard class="table-card">
         <VaCardTitle>
@@ -360,6 +384,7 @@ const showEditModal = ref(false)
 const showDeleteModal = ref(false)
 const saving = ref(false)
 const deleting = ref(false)
+const cleaningDuplicates = ref(false)
 
 // Selected/Editing Data
 const selectedPayment = ref(null)
@@ -396,6 +421,80 @@ const payments = ref([])
 const students = ref([])
 const locations = ref([])
 const groups = ref([])
+
+// Phát hiện các bản ghi trùng lặp trong dữ liệu payments
+const duplicateRecords = computed(() => {
+  const seen = new Set()
+  const duplicates = []
+
+  // convertData trả về mảng đảo ngược (mới nhất lên đầu)
+  // Ta đảo ngược lại để duyệt từ cũ nhất đến mới nhất, giữ lại bản ghi gốc đầu tiên
+  const chronological = [...payments.value].reverse()
+
+  chronological.forEach((p) => {
+    const code = String(p.studentCode || '').trim()
+    const id = String(p.id || '').trim()
+    const date = String(p.datePayment || '').trim()
+    const money = String(p.money || '').replace(/,/g, '').replace(/\./g, '')
+    const lesson = String(p.lesson || '').trim()
+
+    if (!code && !id) return
+
+    const key = id ? `id_${id}` : `biz_${code}_${date}_${money}_${lesson}`
+    if (seen.has(key)) {
+      duplicates.push(p)
+    } else {
+      seen.add(key)
+    }
+  })
+
+  return duplicates
+})
+
+const duplicatePaymentsCount = computed(() => duplicateRecords.value.length)
+
+// Xử lý dọn dẹp các bản ghi trùng lặp
+const handleCleanDuplicates = async () => {
+  if (cleaningDuplicates.value) return
+  cleaningDuplicates.value = true
+
+  try {
+    showMessageBox('Đang tiến hành dọn dẹp các bản ghi trùng lặp...', 'info')
+
+    // 1. Thử gọi action cleanDuplicatePayments (batch)
+    const result = await sendRequest(Action.cleanDuplicatePayments, {})
+
+    if (result.status === 'success' && result.data?.deletedCount !== undefined) {
+      showMessageBox(`Đã dọn dẹp thành công ${result.data.deletedCount} bản ghi trùng lặp!`, 'success')
+      await loadData()
+      return
+    }
+
+    // 2. Nếu Apps Script chưa cập nhật action mới, fallback xóa từng bản ghi trùng
+    console.log('🔄 Fallback: Xóa từng bản ghi trùng lặp qua Action.deletePayment...')
+    const dups = [...duplicateRecords.value]
+    let successCount = 0
+
+    for (const dup of dups) {
+      const payload = dup.id
+        ? { id: dup.id }
+        : { studentCode: dup.studentCode, datePayment: dup.datePayment }
+
+      const delRes = await sendRequest(Action.deletePayment, payload)
+      if (delRes.status === 'success') {
+        successCount++
+      }
+    }
+
+    showMessageBox(`Đã dọn dẹp thành công ${successCount}/${dups.length} bản ghi trùng lặp!`, 'success')
+    await loadData()
+  } catch (error) {
+    console.error('❌ Lỗi khi dọn dẹp bản ghi trùng lặp:', error)
+    showMessageBox(`Lỗi khi dọn dẹp: ${error.message || error}`, 'danger')
+  } finally {
+    cleaningDuplicates.value = false
+  }
+}
 
 // Chart
 const revenueChart = ref(null)

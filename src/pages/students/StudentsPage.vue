@@ -140,17 +140,18 @@
     <PayModal
       :student-to-update="studentToUpdate"
       :is-payment-modal="isPaymentModal"
+      :loading="isPaymentSubmitting"
       @close="cancel"
       @save="
-        (data) => {
-          sendPayment(data)
-          ok()
+        async (data) => {
+          const success = await sendPayment(data)
+          if (success) ok()
         }
       "
       @updateLesson="
-        (data) => {
-          sendUpdateLesson(data)
-          ok()
+        async (data) => {
+          const success = await sendUpdateLesson(data)
+          if (success) ok()
         }
       "
     />
@@ -196,8 +197,7 @@ const filteredCount = ref(0)
 const selectedGroup = ref('')
 const pageSize = 15 // Số lượng mục trên mỗi trang
 const currentPage = ref(1) // Trang hiện tại
-// const doShowModal = ref(false)
-// const studentToEdit = (ref < import('./types').Student) | (null > null)
+const isPaymentSubmitting = ref(false)
 
 const store = useData()
 
@@ -283,33 +283,56 @@ const showUpdateStudentModal = (student) => {
 }
 
 const sendPayment = async (dataJson) => {
+  if (isPaymentSubmitting.value) return false
+  isPaymentSubmitting.value = true
   store.loading = true
-  const res = await sendRequest(Action.createPayment, dataJson)
+  try {
+    const res = await sendRequest(Action.createPayment, dataJson)
 
-  if (res.status == 'success') {
-    // ✅ Backend trả về payment data với ID (gd0001, gd0002, ...)
-    const paymentWithId = res.data
-    console.log('✅ Payment created with ID:', paymentWithId?.id)
+    if (res.status == 'success') {
+      const paymentWithId = res.data
+      console.log('✅ Payment created with ID:', paymentWithId?.id)
 
-    showMessageBox(`Đóng học thành công!`, 'success')
-    updateStudentLesson(dataJson)
-  } else {
-    showMessageBox(`Đóng học thất bại!`, 'danger')
+      showMessageBox(`Đóng học thành công!`, 'success')
+      updateStudentLesson(dataJson)
+      return true
+    } else {
+      showMessageBox(res.data?.message || `Đóng học thất bại!`, 'danger')
+      return false
+    }
+  } catch (error: any) {
+    console.error('❌ Error in sendPayment:', error)
+    showMessageBox(`Đóng học thất bại: ${error?.message || error}`, 'danger')
+    return false
+  } finally {
+    store.loading = false
+    isPaymentSubmitting.value = false
   }
-  store.loading = false
 }
 
 const sendUpdateLesson = async (dataJson) => {
+  if (isPaymentSubmitting.value) return false
+  isPaymentSubmitting.value = true
   store.loading = true
-  const res = await sendRequest(Action.updateLesson, dataJson)
+  try {
+    const res = await sendRequest(Action.updateLesson, dataJson)
 
-  if (res.status == 'success') {
-    showMessageBox(`Điều chỉnh thành công!`, 'success')
-    updateStudentLesson(dataJson)
-  } else {
-    showMessageBox(`Điều chỉnh thất bại!`, 'danger')
+    if (res.status == 'success') {
+      showMessageBox(`Điều chỉnh thành công!`, 'success')
+      updateStudentLesson(dataJson)
+      return true
+    } else {
+      showMessageBox(res.data?.message || `Điều chỉnh thất bại!`, 'danger')
+      return false
+    }
+  } catch (error: any) {
+    console.error('❌ Error in sendUpdateLesson:', error)
+    showMessageBox(`Điều chỉnh thất bại: ${error?.message || error}`, 'danger')
+    return false
+  } finally {
+    store.loading = false
+    isPaymentSubmitting.value = false
   }
-  store.loading = false
 }
 
 const sendNewStudent = async (dataJson) => {

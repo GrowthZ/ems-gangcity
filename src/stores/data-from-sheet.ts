@@ -22,10 +22,28 @@ const delay = (ms: any) => new Promise((resolve) => setTimeout(resolve, ms))
  * Generate idempotency key to prevent duplicate operations
  */
 function generateIdempotencyKey(action: string, param: any): string {
+  // 1. Ưu tiên clientRequestId nếu caller đã định danh trước phiên thao tác
+  if (param && typeof param === 'object' && param.clientRequestId) {
+    return `${action}_${param.clientRequestId}`.replace(/[^a-zA-Z0-9_]/g, '')
+  }
+
+  // 2. Với các thao tác ghi dữ liệu có nghiệp vụ (học sinh, ngày, tiền, buổi):
+  // Tạo key ổn định trong khung thời gian 2 phút để ngăn người dùng click nhiều lần
+  if (param && typeof param === 'object') {
+    const code = param.studentCode || param.code || ''
+    const date = param.datePayment || param.date || ''
+    const amount = param.money || ''
+    const lesson = param.lesson || ''
+    const timeBucket = Math.floor(Date.now() / 120000) // Khung 2 phút
+    if (code) {
+      return `${action}_${code}_${date}_${amount}_${lesson}_${timeBucket}`.replace(/[^a-zA-Z0-9_]/g, '')
+    }
+  }
+
+  // 3. Fallback
   const timestamp = Date.now()
   const random = Math.random().toString(36).substring(7)
-  // Create a simple hash from param (first 20 chars)
-  const paramStr = JSON.stringify(param)
+  const paramStr = JSON.stringify(param || '')
   const paramHash = paramStr.substring(0, Math.min(20, paramStr.length))
   return `${action}_${timestamp}_${random}_${paramHash.replace(/[^a-zA-Z0-9]/g, '')}`
 }
@@ -122,6 +140,7 @@ export const Action = {
   createPayment: 'createPayment',
   updatePayment: 'updatePayment',
   deletePayment: 'deletePayment',
+  cleanDuplicatePayments: 'cleanDuplicatePayments',
   updateLesson: 'updateLesson',
   newStudent: 'newStudent',
   updateStudent: 'updateStudent',
@@ -134,11 +153,15 @@ interface SendRequestResult {
   error?: any
 }
 
+// Map quản lý các request đang gửi dở (in-flight) để chống gửi trùng lặp
+const inFlightRequests = new Map<string, Promise<SendRequestResult>>()
+
 /**
  * IMPROVED: Send request to Apps Script with idempotency key to prevent duplicates
  *
  * ✅ Ưu điểm:
  * - Tránh duplicate rows với idempotency key
+ * - Tự động tái sử dụng request đang pending nếu bị gọi trùng lặp (in-flight deduplication)
  * - Retry logic thông minh - giữ nguyên key khi retry
  * - Timeout hợp lý
  *
@@ -146,9 +169,20 @@ interface SendRequestResult {
  * READ operations sử dụng API v4 (fetchDataSheet)
  */
 export const sendRequest = async (action: string, param: any): Promise<SendRequestResult> => {
-  // ✅ FIX: Generate idempotency key MỘT LẦN, giữ nguyên khi retry
   const idempotencyKey = generateIdempotencyKey(action, param)
-  return _doSendRequest(action, param, idempotencyKey)
+
+  // Nếu cùng action và idempotencyKey đang có một request chạy, tái sử dụng Promise cũ
+  if (inFlightRequests.has(idempotencyKey)) {
+    console.log(`⚠️ Request trùng đang được xử lý (key: ${idempotencyKey}), dùng chung kết quả in-flight`)
+    return inFlightRequests.get(idempotencyKey)!
+  }
+
+  const reqPromise = _doSendRequest(action, param, idempotencyKey).finally(() => {
+    inFlightRequests.delete(idempotencyKey)
+  })
+
+  inFlightRequests.set(idempotencyKey, reqPromise)
+  return reqPromise
 }
 
 const _doSendRequest = async (

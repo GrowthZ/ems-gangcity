@@ -202,6 +202,7 @@
       <PayModal
         :student-to-update="student"
         :is-payment-modal="isPaymentModal"
+        :loading="isPaymentSubmitting"
         @close="cancel"
         @save="
           async (data) => {
@@ -280,6 +281,7 @@ const items = ref([])
 const doShowPayModal = ref(false)
 const isPaymentModal = ref(false)
 const doShowStudentModal = ref(false)
+const isPaymentSubmitting = ref(false)
 
 // Computed
 const studentId = computed(() => route.params.id)
@@ -381,6 +383,8 @@ const getStatusColor = (status) => {
 
 // API calls
 const sendPayment = async (dataJson) => {
+  if (isPaymentSubmitting.value) return false
+  isPaymentSubmitting.value = true
   store.loading = true
   try {
     const res = await sendRequest(Action.createPayment, dataJson)
@@ -394,19 +398,22 @@ const sendPayment = async (dataJson) => {
       await loadStudentData() // Reload data
       return true // ✅ Trả về success
     } else {
-      showMessageBox(`Đóng học thất bại!`, 'danger')
+      showMessageBox(res.data?.message || `Đóng học thất bại!`, 'danger')
       return false // ❌ Trả về fail
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ Error in sendPayment:', error)
-    showMessageBox(`Đóng học thất bại!`, 'danger')
+    showMessageBox(`Đóng học thất bại: ${error?.message || error}`, 'danger')
     return false
   } finally {
     store.loading = false
+    isPaymentSubmitting.value = false
   }
 }
 
 const sendUpdateLesson = async (dataJson) => {
+  if (isPaymentSubmitting.value) return false
+  isPaymentSubmitting.value = true
   store.loading = true
   try {
     const res = await sendRequest(Action.updateLesson, dataJson)
@@ -416,15 +423,16 @@ const sendUpdateLesson = async (dataJson) => {
       await loadStudentData() // Reload data
       return true // ✅ Trả về success
     } else {
-      showMessageBox(`Điều chỉnh thất bại!`, 'danger')
+      showMessageBox(res.data?.message || `Điều chỉnh thất bại!`, 'danger')
       return false // ❌ Trả về fail
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ Error in sendUpdateLesson:', error)
-    showMessageBox(`Điều chỉnh thất bại!`, 'danger')
+    showMessageBox(`Điều chỉnh thất bại: ${error?.message || error}`, 'danger')
     return false
   } finally {
     store.loading = false
+    isPaymentSubmitting.value = false
   }
 }
 

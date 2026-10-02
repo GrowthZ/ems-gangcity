@@ -98,14 +98,23 @@ import { VaInput } from 'vuestic-ui'
 const today = new Date()
 const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate())
 
-const props = defineProps<{
-  studentToUpdate: any
-  isPaymentModal: boolean
-}>()
+const props = withDefaults(
+  defineProps<{
+    studentToUpdate: any
+    isPaymentModal: boolean
+    loading?: boolean
+  }>(),
+  {
+    loading: false,
+  },
+)
 
 const student = ref<any>(props.studentToUpdate)
 const isPayment = ref<boolean>(props.isPaymentModal)
-const isLoading = ref<boolean>(false) // ✅ Thêm loading state
+const internalLoading = ref<boolean>(false)
+const isLoading = computed(() => props.loading || internalLoading.value)
+// Sinh ID giao dịch duy nhất cho phiên mở modal này (chống trùng lặp tuyệt đối)
+const clientRequestId = ref<string>(`pay_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`)
 const btnLabel = computed(() => (isPayment.value ? 'Đóng học' : 'Cập nhật'))
 const placeholderText = computed(() => (isPayment.value ? 'Thông tin đóng học...' : 'Thông tin điều chỉnh...'))
 
@@ -146,26 +155,30 @@ const isValidated = computed(() => {
 const emit = defineEmits(['close', 'save', 'updateLesson'])
 
 const onSave = () => {
-  // ✅ Ngăn double-click
+  // ✅ Ngăn double-click / đa submit
   if (isLoading.value) {
     console.log('⚠️ Request đang xử lý, bỏ qua click này')
     return
   }
 
-  isLoading.value = true
+  internalLoading.value = true
 
-  if (isPayment.value) {
-    newPayment.value.money = parseInt(newPayment.value.money).toLocaleString()
-    emit('save', newPayment.value)
-  } else {
-    emit('updateLesson', newPayment.value)
+  const payload = {
+    ...newPayment.value,
+    clientRequestId: clientRequestId.value,
   }
 
-  // Reset loading sau khi emit (component cha sẽ xử lý)
-  // Timeout nhỏ để tránh double-click trong khoảng thời gian ngắn
+  if (isPayment.value) {
+    payload.money = parseInt(payload.money).toLocaleString()
+    emit('save', payload)
+  } else {
+    emit('updateLesson', payload)
+  }
+
+  // Safety fallback: Sau 40s nếu mạng treo mới bỏ khóa loading
   setTimeout(() => {
-    isLoading.value = false
-  }, 1000)
+    internalLoading.value = false
+  }, 40000)
 }
 
 const getOptionByText = (text: string) => {
