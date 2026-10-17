@@ -20,6 +20,21 @@
           <VaSelect v-model="selectedGroup" placeholder="Chọn lớp" :options="uniqueGroups" value-by="value" />
         </div>
 
+        <div class="flex flex-wrap gap-2 mb-4">
+          <VaButton
+            v-for="s in statusOptions"
+            :key="s.value"
+            :color="s.color"
+            :border-color="s.color"
+            :preset="selectedStatus === s.value ? undefined : 'secondary'"
+            size="small"
+            round
+            @click="selectedStatus = s.value"
+          >
+            {{ s.text }}: <strong class="ml-1">{{ statusCounts[s.value] || 0 }}</strong>
+          </VaButton>
+        </div>
+
         <VaDataTable
           animation="fade-in-up"
           class="va-data-table"
@@ -115,11 +130,7 @@
           </template>
         </VaDataTable>
 
-        <div class="flex justify-between items-center mb-6">
-          <div color="info" class="pt-3">
-            Tổng số:
-            <strong>{{ filteredItems.length }}</strong>
-          </div>
+        <div class="flex justify-end items-center mb-6">
           <div>
             <VaPagination
               v-if="isPaginationVisible"
@@ -195,6 +206,13 @@ const filter = ref('')
 const filterByFields = ref([])
 const filteredCount = ref(0)
 const selectedGroup = ref('')
+const selectedStatus = ref('')
+const statusOptions = [
+  { value: '', text: 'Tất cả', color: 'primary' },
+  { value: 'Đang học', text: 'Đang học', color: 'success' },
+  { value: 'Tạm nghỉ', text: 'Tạm nghỉ', color: 'warning' },
+  { value: 'Đã nghỉ', text: 'Đã nghỉ', color: 'danger' },
+]
 const pageSize = 15 // Số lượng mục trên mỗi trang
 const currentPage = ref(1) // Trang hiện tại
 const isPaymentSubmitting = ref(false)
@@ -373,7 +391,8 @@ const uniqueGroups = computed(() => {
   return items.value ? uniqueGroupsArray : []
 })
 
-const filteredItems = computed(() => {
+// Lọc theo lớp + tìm kiếm (chưa lọc trạng thái) để đếm số lượng mỗi trạng thái
+const baseFilteredItems = computed(() => {
   return mergedData.value.filter((item) => {
     const isAllSelected = selectedGroup.value === ''
     if (!isAllSelected) {
@@ -409,6 +428,18 @@ const filteredItems = computed(() => {
     return isMatchFilter && isMatchFields
   })
 })
+
+const statusCounts = computed(() => {
+  const counts = { '': baseFilteredItems.value.length }
+  for (const item of baseFilteredItems.value) counts[item.status] = (counts[item.status] || 0) + 1
+  return counts
+})
+
+const filteredItems = computed(() =>
+  selectedStatus.value === ''
+    ? baseFilteredItems.value
+    : baseFilteredItems.value.filter((item) => item.status === selectedStatus.value),
+)
 
 const totalPages = computed(() => {
   return Math.ceil(filteredItems.value.length / pageSize)
@@ -477,7 +508,7 @@ const copyProperties = (target, source) => {
 }
 // fetchStudents()
 
-watch(selectedGroup, () => {
+watch([selectedGroup, selectedStatus], () => {
   store.loading = true
   sleep(100).then(() => {
     store.loading = false
